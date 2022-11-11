@@ -15,4 +15,8 @@
         <PackageReference Include="NuGet.Protocol" version="6.1.0" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\Arroyo\Arroyo.csproj" />
+    </ItemGroup>
+
 </Project>

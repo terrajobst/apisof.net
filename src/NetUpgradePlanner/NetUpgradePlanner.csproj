@@ -39,7 +39,6 @@
   <ItemGroup>
     <PackageReference Include="Clowd.Squirrel" Version="2.9.42" />
     <PackageReference Include="DocumentFormat.OpenXml" Version="2.11.3" />
-    <PackageReference Include="Microsoft.Cci.Extensions" Version="7.0.0-beta.22175.2" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
     <PackageReference Include="Nerdbank.GitVersioning" Version="3.4.255">
       <PrivateAssets>all</PrivateAssets>
@@ -49,6 +48,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Arroyo\Arroyo.csproj" />
     <ProjectReference Include="..\Terrajobst.ApiCatalog\Terrajobst.ApiCatalog.csproj" />
 	  <ProjectReference Include="..\Terrajobst.UsageCrawling\Terrajobst.UsageCrawling.csproj" />
   </ItemGroup>

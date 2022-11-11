@@ -1,10 +1,23 @@
-﻿using Microsoft.Cci.Extensions;
+﻿//#define USE_CCI
+
+#if !DEBUG
+#define PARALLELIZE
+#endif
+
+using Arroyo;
+using Microsoft.Cci.Extensions;
 
 using NuGet.Frameworks;
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+
+#if PARALLELIZE
+using System.Threading.Tasks;
+#endif
 
 using Terrajobst.UsageCrawling;
 
@@ -57,6 +70,7 @@ internal sealed class AssemblySet
 
     public static AssemblySet Create(IEnumerable<string> paths, IProgressMonitor progressMonitor)
     {
+#if USE_CCI
         var materializedPaths = paths.ToArray();
 
         var entries = new List<AssemblySetEntry>();
@@ -89,9 +103,55 @@ internal sealed class AssemblySet
             var usedApis = crawlerResults.Data.Select(kv => kv.Key.Guid);
             var entry = new AssemblySetEntry(assemblyNames, assemblyFramework, dependencies, usedApis);
             entries.Add(entry);
+
+            if (entries.Count > 50)
+                break;
         }
 
         return new AssemblySet(entries);
+#else
+        var materializedPaths = paths.ToArray();
+
+        var assemblyNames = new ConcurrentDictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        var entries = new ConcurrentBag<AssemblySetEntry>();
+
+        var current = 0;
+
+#if PARALLELIZE
+        Parallel.ForEach(materializedPaths, path =>
+#else
+        foreach (var path in materializedPaths)
+#endif
+        {       
+            var file = MetadataFile.Open(path);
+            if (file is not null && assemblyNames.TryAdd(file.Name, null))
+            {
+                using var module = file is MetadataAssembly a ? a.MainModule : (MetadataModule)file;
+                var tfm = module.ContainingAssembly?.GetTargetFrameworkMoniker();
+                var assemblyFramework = string.IsNullOrEmpty(tfm) ? null : NuGetFramework.Parse(tfm).GetShortFolderName();
+
+                var crawler = new AssemblyCrawlerArroyo();
+                crawler.Crawl(file);
+
+                var crawlerResults = crawler.GetResults();
+
+                var dependencies = module.AssemblyReferences.Select(ar => ar.Name);
+                var usedApis = crawlerResults.Data.Select(kv => kv.Key.Guid);
+                var entry = new AssemblySetEntry(file.Name, assemblyFramework, dependencies, usedApis);
+
+                entries.Add(entry);
+
+            }
+
+            Interlocked.Increment(ref current);
+            progressMonitor.Report(current, materializedPaths.Length);
+        }
+#if PARALLELIZE
+        );
+#endif
+        
+        return new AssemblySet(entries.OrderBy(e => e.Name));
+#endif
     }
 
     public IEnumerable<AssemblySetEntry> GetAncestors(AssemblySetEntry entry)

@@ -1,4 +1,6 @@
-﻿using Microsoft.Cci;
+﻿using Arroyo;
+
+using Microsoft.Cci;
 using Microsoft.Cci.Extensions;
 
 namespace Terrajobst.UsageCrawling;
@@ -27,6 +29,9 @@ public sealed class AssemblyCrawler
     {
         foreach (var attribute in attributes)
         {
+            if (attribute is Dummy)
+                GlobalStats.IncrementCustomAttributes();
+
             Record(attribute.Type);
             Record(attribute.Constructor);
 
