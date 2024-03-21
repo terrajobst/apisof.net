@@ -1,0 +1,84 @@
+﻿@page "/catalog/assemblies/{GuidText}"
+
+@if (Assembly is null)
+{
+    <div class="container-fluid">
+        <div class="alert alert-primary mt-2">
+            <p>Assembly '@GuidText' doesn't exist.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid px-0">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><Glyph Kind="GlyphKind.Database" /> <a href="@Link.ForCatalog()">Catalog</a></li>
+                <li class="breadcrumb-item"><a href="@Link.ForAssemblies()">Assemblies</a></li>
+                <li class="breadcrumb-item"><Glyph Kind="GlyphKind.Assembly" /> @Assembly.ToString()</li>
+            </ol>
+        </nav>
+    </div>
+    
+    <div class="container-fluid">
+        <ul class="nav nav-tabs mb-2">
+            @{
+                var frameworksActiveClass = CurrentPage == "frameworks" ? "active" : "";
+                var frameworksDisabledClass = Frameworks.Any() ? "" : "disabled";
+                var packagesActiveClass = CurrentPage == "packages" ? "active" : "";
+                var packagesDisabledClass = Packages.Any() ? "" : "disabled";
+                var versionsActiveClass = CurrentPage == "versions" ? "active" : "";
+            }
+            <li class="nav-item">
+                <a class="nav-link @frameworksActiveClass @frameworksDisabledClass" href="@NavigationManager.GetUriWithQueryParameter("p", "frameworks")">Frameworks</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @packagesActiveClass @packagesDisabledClass" href="@NavigationManager.GetUriWithQueryParameter("p", "packages")">Packages</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @versionsActiveClass" href="@NavigationManager.GetUriWithQueryParameter("p", "versions")">Versions</a>
+            </li>
+        </ul>
+
+        @if (CurrentPage == "frameworks")
+        {
+            <ul class="list-unstyled">
+                @foreach (var framework in Frameworks)
+                {
+                    <li>
+                        <Glyph Kind="GlyphKind.Framework" /> <a href="@Link.For(framework)">@framework.Name</a>
+                    </li>    
+                }
+            </ul>
+        }
+        else if (CurrentPage == "packages")
+        {
+            <ul class="list-unstyled">
+                @foreach (var package in Packages)
+                {
+                    <li>
+                        <Glyph Kind="GlyphKind.Package" /> <a href="@Link.For(package)">@package.Name @package.Version</a>
+                    </li>
+                }
+            </ul>
+        }
+        else if (CurrentPage == "versions")
+        {
+            <ul class="list-unstyled">
+                @foreach (var assembly in Assemblies)
+                {
+                    <li>
+                        @if (assembly == Assembly)
+                        {
+                            <Glyph Kind="GlyphKind.Assembly" /> <strong>@assembly.ToString(), Fingerprint=@assembly.Guid.ToString("N")</strong>
+                        }
+                        else
+                        {
+                            <Glyph Kind="GlyphKind.Assembly" /> <a href="@Link.For(assembly)">@assembly.ToString(), Fingerprint=@assembly.Guid.ToString("N")</a>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+}

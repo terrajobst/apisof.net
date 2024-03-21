@@ -1,0 +1,68 @@
+﻿@page "/catalog/frameworks/{FrameworkName}"
+
+@if (Framework is null)
+{
+    <div class="container-fluid">
+        <div class="alert alert-primary mt-2">
+            <p>Framework '@FrameworkName' doesn't exist.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid px-0">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><Glyph Kind="GlyphKind.Database" /> <a href="@Link.ForCatalog()">Catalog</a></li>
+                <li class="breadcrumb-item"><a href="@Link.ForFrameworks()">Frameworks</a></li>
+                <li class="breadcrumb-item"><Glyph Kind="GlyphKind.Framework" /> @Framework.Value.Name</li>
+            </ol>
+        </nav>
+    </div>
+    
+    <div class="container-fluid">
+    
+        <ul class="nav nav-tabs mb-2">
+            @{
+                var assembliesActiveClass = CurrentPage == "assemblies" ? "active" : "";
+                var versionsActiveClass = CurrentPage == "versions" ? "active" : "";
+            }
+            <li class="nav-item">
+                <a class="nav-link @assembliesActiveClass" href="@NavigationManager.GetUriWithQueryParameter("p", "assemblies")">Assemblies</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @versionsActiveClass" href="@NavigationManager.GetUriWithQueryParameter("p", "versions")">Versions</a>
+            </li>
+        </ul>
+        
+        @if (CurrentPage == "assemblies")
+        {
+            <ul class="list-unstyled">
+                @foreach (var assembly in Framework.Value.Assemblies.OrderBy(fx => fx.Name).ThenBy(a => System.Version.Parse(a.Version)).ThenBy(a => a.Guid))
+                {
+                    <li>
+                        <Glyph Kind="GlyphKind.Assembly" /> <a href="@Link.For(assembly)">@assembly.ToString()</a>
+                    </li>
+                }
+            </ul>
+        }
+        else if (CurrentPage == "versions")
+        {
+            <ul class="list-unstyled">
+                @foreach (var framework in Versions)
+                {
+                    <li>
+                        @if (framework == Framework)
+                        {
+                            <Glyph Kind="GlyphKind.Framework" /> <strong>@framework.Name</strong>
+                        }
+                        else
+                        {
+                            <Glyph Kind="GlyphKind.Framework" /> <a href="@Link.For(framework)">@framework.Name</a>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+}

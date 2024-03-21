@@ -6,7 +6,7 @@ using Terrajobst.ApiCatalog;
 
 namespace ApisOfDotNet.Pages;
 
-public partial class CatalogItem
+public partial class ApiItem
 {
     [Inject]
     public required CatalogService CatalogService { get; set; }

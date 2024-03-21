@@ -22,7 +22,7 @@ public partial class SyntaxView
     public required Markup Markup { get; set; }
 
     [Parameter]
-    public ApiModel Current { get; set; }
+    public required ApiModel Current { get; set; }
 
     public MarkupString Output { get; set; }
 

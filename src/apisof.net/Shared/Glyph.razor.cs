@@ -5,6 +5,7 @@ namespace ApisOfDotNet.Shared;
 
 public enum GlyphKind
 {
+    Assembly,
     Class,
     Constant,
     Database,
@@ -14,12 +15,14 @@ public enum GlyphKind
     Event,
     ExtensionMethod,
     Field,
+    Framework,
     Interface,
     Method,
     Namespace,
     Operator,
+    Package,
     Property,
-    Struct
+    Struct,
 }
 
 public static class GlyphExtensions
@@ -54,19 +57,22 @@ public static class GlyphExtensions
     public static string ToUrl(this GlyphKind kind)
     {
         return kind switch {
-            GlyphKind.Database => "/img/Database.svg",
+            GlyphKind.Assembly => "/img/Assembly.svg",
             GlyphKind.Class => "/img/Class.svg",
             GlyphKind.Constant => "/img/Constant.svg",
+            GlyphKind.Database => "/img/Database.svg",
             GlyphKind.Delegate => "/img/Delegate.svg",
             GlyphKind.Enum => "/img/Enum.svg",
             GlyphKind.EnumItem => "/img/EnumItem.svg",
             GlyphKind.Event => "/img/Event.svg",
             GlyphKind.ExtensionMethod => "/img/ExtensionMethod.svg",
             GlyphKind.Field => "/img/Field.svg",
+            GlyphKind.Framework => "/img/Framework.svg",
             GlyphKind.Interface => "/img/Interface.svg",
             GlyphKind.Method => "/img/Method.svg",
             GlyphKind.Namespace => "/img/Namespace.svg",
             GlyphKind.Operator => "/img/Operator.svg",
+            GlyphKind.Package => "/img/Package.svg",
             GlyphKind.Property => "/img/Property.svg",
             GlyphKind.Struct => "/img/Struct.svg",
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)

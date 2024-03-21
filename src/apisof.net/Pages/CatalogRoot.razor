@@ -3,25 +3,47 @@
 <div class="container-fluid px-0">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><Glyph Kind="GlyphKind.Database" /> <a href="/catalog">Catalog</a></li>
+            <li class="breadcrumb-item"><Glyph Kind="GlyphKind.Database" /> <a href="@Link.ForCatalog()">Catalog</a></li>
         </ol>
     </nav>
 </div>
 
 <div class="container-fluid">
 
-    <ul class="list-unstyled">
-        <li>
-            <Glyph Kind="GlyphKind.Database" /> <span class="font-weight-bold">Catalog</span>
+  <div class="about_cards">
 
-            <ul class="list-unstyled pl-4">
-                @foreach (var child in CatalogService.Catalog.RootApis.OrderBy(x => x)) // TODO: Ideally the catalog is pre-sorted
-                {
-                    <li>
-                        <Glyph Kind="@child.Kind.GetGlyph()" /> <a href="@Link.For(child)">@child.Name</a>
-                    </li>
-                }
-            </ul>
-        </li>
-    </ul>
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Namespaces</h5>
+        <p class="card-text">Explore the catalog by namespace.</p>
+        <a class="btn btn-primary" href="@Link.ForApis()" >Browse Namespaces</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Frameworks</h5>
+        <p class="card-text">Explore the catalog by framework.</p>
+        <a class="btn btn-primary" href="@Link.ForFrameworks()" >Browse Frameworks</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Packages</h5>
+        <p class="card-text">Explore the catalog by package.</p>
+        <a class="btn btn-secondary" href="@Link.ForPackages()" >Browse Packages</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Assemblies</h5>
+        <p class="card-text">Explore the catalog by assembly.</p>
+        <a class="btn btn-secondary" href="@Link.ForAssemblies()" >Browse Assemblies</a>
+      </div>
+    </div>
+    
+  </div>
+
 </div>

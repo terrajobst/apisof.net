@@ -17,9 +17,15 @@ public sealed class QueryManager : IDisposable
         _previousLocation = navigationManager.Uri;
     }
 
-    public string GetQueryParameter(string name)
+    public string? GetQueryParameter(string name)
     {
         return _navigationManager.GetQueryParameter(name);
+    }
+
+    public void SetQueryParameter(string name, string? value)
+    {
+        var uri = _navigationManager.SetQueryParameter(name, value);
+        _navigationManager.NavigateTo(uri, replace: true);
     }
     
     public void Dispose()

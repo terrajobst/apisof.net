@@ -1,0 +1,40 @@
+﻿@page "/catalog/packages"
+
+<div class="container-fluid px-0">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <Glyph Kind="GlyphKind.Database"/> <a href="@Link.ForCatalog()">Catalog</a>
+            </li>
+            <li class="breadcrumb-item">Packages</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="container-fluid mb-2">
+    <input type="text" class="form-control" placeholder="Filter Packages" @bind="Items.Filter" @bind:event="oninput">
+</div>
+
+<div class="container-fluid">
+
+    <ul class="list-unstyled">
+        <li>
+            <Glyph Kind="GlyphKind.Database"/> <span class="font-weight-bold">Packages</span>
+
+            <ul class="list-unstyled pl-4">
+                @foreach (var package in Items)
+                {
+                    <li>
+                        <Glyph Kind="GlyphKind.Package"/> <a href="@Link.For(package)">@package.Name</a>
+                    </li>
+                }
+                @if (Items.HasMore)
+                {
+                    <li>
+                        <button class="btn btn-link pl-0 text-muted" @onclick="() => Items.Limit = false">Show more (@Items.Total.ToString("N0") items total)</button>
+                    </li>
+                }
+            </ul>
+        </li>
+    </ul>
+</div>
