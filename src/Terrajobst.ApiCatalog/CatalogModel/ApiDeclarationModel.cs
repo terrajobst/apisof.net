@@ -7,6 +7,8 @@ public readonly struct ApiDeclarationModel : IEquatable<ApiDeclarationModel>
 
     internal ApiDeclarationModel(ApiModel api, int offset)
     {
+        // TODO: Validating the offset is difficult because it's not pointing to a row.
+
         _api = api;
         _offset = offset;
     }
@@ -15,14 +17,7 @@ public readonly struct ApiDeclarationModel : IEquatable<ApiDeclarationModel>
 
     public ApiModel Api => _api;
 
-    public AssemblyModel Assembly
-    {
-        get
-        {
-            var assemblyOffset = _api.Catalog.ApiTable.ReadInt32(_offset);
-            return new AssemblyModel(_api.Catalog, assemblyOffset);
-        }
-    }
+    public AssemblyModel Assembly => ApiCatalogSchema.ApiDeclarationStructure.Assembly.Read(_api.Catalog, _offset);
 
     public ObsoletionModel? Obsoletion
     {
@@ -58,7 +53,7 @@ public readonly struct ApiDeclarationModel : IEquatable<ApiDeclarationModel>
 
     public Markup GetMyMarkup()
     {
-        var markupOffset = _api.Catalog.ApiTable.ReadInt32(_offset + 4);
+        var markupOffset = ApiCatalogSchema.ApiDeclarationStructure.SyntaxOffset.Read(_api.Catalog, _offset);
         return _api.Catalog.GetMarkup(markupOffset);
     }
 
