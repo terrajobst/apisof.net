@@ -393,6 +393,28 @@ public sealed partial class CatalogBuilder
                 _writer = new BinaryWriter(_data, Encoding.UTF8, leaveOpen: true);
             }
 
+            public void SetLength(int newLength)
+            {
+                _writer.Flush();
+                _data.SetLength(newLength);
+            }
+
+            public Guid GetFingerprint(int startOffset)
+            {
+                _writer.Flush();
+                
+                var oldPosition = _data.Position;
+                _data.Position = startOffset;
+
+                var bytes = (Span<byte>) stackalloc byte[16];
+                MD5.HashData(_data, bytes);
+                var fingerprint = new Guid(bytes);
+                
+                _data.Position = oldPosition;
+
+                return fingerprint;
+            }
+            
             public void Seek(int offset)
             {
                 _writer.Flush();
@@ -514,7 +536,25 @@ public sealed partial class CatalogBuilder
             private readonly List<BlobOffset> _assemblyPatchups = new();
             private readonly List<BlobOffset> _apiPatchups = new();
             private readonly List<(BlobOffset, IntermediateDeclaration)> _syntaxPatchups = new();
-            private readonly Dictionary<Guid, BlobOffset> _storedPlatformSupport = new();
+            private readonly Dictionary<Guid, BlobOffset> _storedBlobs = new();
+
+            private BlobOffset Deduplicate(BlobOffset offset)
+            {
+                var fingerprint = Memory.GetFingerprint(offset.Value);
+                if (!_storedBlobs.TryGetValue(fingerprint, out var existingOffset))
+                {
+                    _storedBlobs.Add(fingerprint, offset);
+                    return offset;
+                }
+                
+                var start = offset.Value;
+                _assemblyPatchups.RemoveAll(p => p.Value >= start);
+                _apiPatchups.RemoveAll(p => p.Value >= start);
+                Memory.SetLength(start);
+                Memory.Seek(start);
+                
+                return existingOffset;
+            }
 
             private void WriteAssemblyPatchup(IntermediaAssembly assembly)
             {
@@ -555,7 +595,7 @@ public sealed partial class CatalogBuilder
                 foreach (var assembly in assemblies)
                     WriteAssemblyPatchup(assembly);
 
-                return result;
+                return Deduplicate(result);
             }
 
             public BlobOffset StoreAssemblies(IReadOnlyList<(IntermediateFramework, IntermediaAssembly)> assemblies,
@@ -573,7 +613,7 @@ public sealed partial class CatalogBuilder
                     WriteAssemblyPatchup(assembly);
                 }
 
-                return result;
+                return Deduplicate(result);
             }
 
             public BlobOffset StoreFrameworks(IReadOnlyList<IntermediateFramework> frameworks,
@@ -588,7 +628,7 @@ public sealed partial class CatalogBuilder
                 foreach (var framework in frameworks)
                     Memory.WriteFrameworkOffset(frameworkOffsets[framework]);
 
-                return result;
+                return Deduplicate(result);
             }
 
             public BlobOffset StorePackages(IReadOnlyList<(IntermediatePackage, IntermediateFramework)> packages,
@@ -607,7 +647,7 @@ public sealed partial class CatalogBuilder
                     Memory.WriteFrameworkOffset(frameworkOffsets[framework]);
                 }
 
-                return result;
+                return Deduplicate(result);
             }
 
             public BlobOffset StoreApis(IReadOnlyList<IntermediaApi> apis)
@@ -621,7 +661,7 @@ public sealed partial class CatalogBuilder
                 foreach (var api in apis)
                     WriteApiPatchup(api);
 
-                return result;
+                return Deduplicate(result);
             }
 
             public BlobOffset StoreDeclarations(IReadOnlyList<IntermediateDeclaration> declarations,
@@ -639,6 +679,9 @@ public sealed partial class CatalogBuilder
                     WriteSyntaxPatchup(declaration);
                 }
 
+                // Don't deduplicate declarations. For starters, we're just wasting time because they are unique.
+                // More importantly, we're emitting a placeholder entry for the syntax which happens to be -1 for
+                // all declarations, therefore causing false de-duplications.
                 return result;
             }
 
@@ -657,7 +700,7 @@ public sealed partial class CatalogBuilder
                     Memory.WriteSingle(usage.Percentage);
                 }
 
-                return result;
+                return Deduplicate(result);
             }
 
             public BlobOffset StorePlatformSupport(IReadOnlyList<IntermediatePlatformSupport> platforms,
@@ -666,42 +709,46 @@ public sealed partial class CatalogBuilder
                 if (platforms.Count == 0)
                     return BlobOffset.Nil;
 
-                var fingerprint = GetFingerprint(platforms);
-                if (!_storedPlatformSupport.TryGetValue(fingerprint, out var result))
-                {
-                    result = SeekEnd();
+                var result = SeekEnd();
 
-                    Memory.WriteInt32(platforms.Count);
-                    foreach (var platformSupport in platforms)
-                    {
-                        Memory.WriteStringOffset(stringHeap.Store(platformSupport.PlatformName));
-                        Memory.WriteBool(platformSupport.IsSupported);
-                    }
+                Memory.WriteInt32(platforms.Count);
+                foreach (var platformSupport in platforms.OrderBy(p => p.PlatformName, StringComparer.Ordinal)
+                                                         .ThenBy(p => p.IsSupported))
+                {
+                    Memory.WriteStringOffset(stringHeap.Store(platformSupport.PlatformName));
+                    Memory.WriteBool(platformSupport.IsSupported);
+                }
                     
-                    _storedPlatformSupport.Add(fingerprint, result);
-                }
-
-                return result;
-
-                static Guid GetFingerprint(IReadOnlyList<IntermediatePlatformSupport> platforms)
-                {
-                    using var stream = new MemoryStream();
-
-                    using (var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))
-                    {
-                        foreach (var support in platforms.OrderBy(ps => ps.PlatformName, StringComparer.OrdinalIgnoreCase)
-                                                         .ThenBy(ps => ps.IsSupported))
-                        {
-                            writer.Write(support.PlatformName.ToLowerInvariant());
-                            writer.Write(support.IsSupported);
-                        }
-                    }
-
-                    var bytes = MD5.HashData(stream);
-                    return new Guid(bytes);
-                }
+                return Deduplicate(result);
             }
-            
+
+            private BlobOffset StoreSyntax(CatalogBuilder builder, StringHeap stringHeap, string syntax)
+            {
+                var markup = Markup.Parse(syntax);
+
+                var result = SeekEnd();
+                Memory.WriteInt32(markup.Parts.Length);
+
+                foreach (var part in markup.Parts)
+                {
+                    var kind = (byte)part.Kind;
+                    var text = stringHeap.Store(part.Text);
+
+                    Memory.WriteByte(kind);
+                    Memory.WriteStringOffset(text);
+
+                    if (part.Kind == MarkupPartKind.Reference)
+                    {
+                        if (part.Reference is not null &&  builder._apiByFingerprint.TryGetValue(part.Reference.Value, out var api))
+                            WriteApiPatchup(api);
+                        else
+                            Memory.WriteInt32(-1);
+                    }
+                }
+
+                return Deduplicate(result);
+            }
+
             public void PatchSyntaxes(CatalogBuilder builder, StringHeap stringHeap)
             {
                 var syntaxOffsets = new Dictionary<string, BlobOffset>(StringComparer.Ordinal);
@@ -710,7 +757,7 @@ public sealed partial class CatalogBuilder
                 {
                     if (!syntaxOffsets.TryGetValue(declaration.Syntax, out var syntaxOffset))
                     {
-                        syntaxOffset = StoreSyntax(declaration.Syntax);
+                        syntaxOffset = StoreSyntax(builder, stringHeap, declaration.Syntax);
                         syntaxOffsets.Add(declaration.Syntax, syntaxOffset);
                     }
 
@@ -719,33 +766,6 @@ public sealed partial class CatalogBuilder
                 }
 
                 Memory.Seek(Memory.GetLength());
-
-                BlobOffset StoreSyntax(string syntax)
-                {
-                    var markup = Markup.Parse(syntax);
-
-                    var result = SeekEnd();
-                    Memory.WriteInt32(markup.Parts.Length);
-
-                    foreach (var part in markup.Parts)
-                    {
-                        var kind = (byte)part.Kind;
-                        var text = stringHeap.Store(part.Text);
-
-                        Memory.WriteByte(kind);
-                        Memory.WriteStringOffset(text);
-
-                        if (part.Kind == MarkupPartKind.Reference)
-                        {
-                            if (part.Reference is not null &&  builder._apiByFingerprint.TryGetValue(part.Reference.Value, out var api))
-                                WriteApiPatchup(api);
-                            else
-                                Memory.WriteInt32(-1);
-                        }
-                    }
-
-                    return result;
-                }
             }
 
             public void PatchApiOffsets(IReadOnlyList<IntermediaApi> apis,
