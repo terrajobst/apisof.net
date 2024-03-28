@@ -13,6 +13,220 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        static bool IsType(ApiModel api)
+        {
+            return api.Kind.IsType();
+        }
+
+        static bool IsMethod(ApiModel api)
+        {
+            return api.Kind switch {
+                ApiKind.Constructor => true,
+                ApiKind.PropertyGetter => true,
+                ApiKind.PropertySetter => true,
+                ApiKind.Method => true,
+                ApiKind.Operator => true,
+                ApiKind.EventAdder => true,
+                ApiKind.EventRemover => true,
+                ApiKind.EventRaiser => true,
+                _ => false
+            };
+        }
+
+        static bool IsField(ApiModel api)
+        {
+            return api.Kind is ApiKind.Field or ApiKind.EnumItem;
+        }
+
+        static bool IsProperty(ApiModel api)
+        {
+            return api.Kind == ApiKind.Property;
+        }
+
+        static bool IsEvent(ApiModel api)
+        {
+            return api.Kind == ApiKind.Event;
+        }
+
+        static int GetParameterCount(ApiModel api)
+        {
+            if (!IsMethod(api))
+                return 0;
+
+            var name = api.Name;
+            var openParen = name.IndexOf('(');
+            var closeParen = name.IndexOf(')');
+
+            if (openParen < 0 && closeParen < 0)
+                return 0;
+            
+            if (openParen < 0 || closeParen < 0)
+                return 0;
+
+            if (closeParen == openParen + 1)
+                return 0;
+
+            var result = 1;
+
+            for (var i = openParen + 1; i < closeParen; i++)
+            {
+                if (name[i] == ',')
+                    result++;
+            }
+
+            return result;
+        }
+
+        static int GetPropertyMapCount(ApiModel api)
+        {
+            if (!IsProperty(api))
+                return 0;
+
+            return api.Children.Count();
+        }
+
+        static int GetEventMapCount(ApiModel api)
+        {
+            if (!IsEvent(api))
+                return 0;
+
+            return api.Children.Count();
+        }
+
+        static int GetGenericParameterCount(ApiModel api)
+        {
+            if (!IsType(api) && !IsMethod(api))
+                return 0;
+
+            var name = api.Name;
+            var openParen = name.IndexOf('<');
+            var closeParen = name.IndexOf('>');
+
+            if (openParen < 0 || closeParen < 0)
+                return 0;
+
+            var result = 1;
+
+            for (var i = openParen + 1; i < closeParen; i++)
+            {
+                if (name[i] == ',')
+                    result++;
+            }
+
+            return result;
+        }
+
+        var catalog = await ApiCatalogModel.LoadAsync(@"C:\Users\immol\Downloads\Catalog\apicatalog.dat");
+
+        var childArraySizes = catalog.AllApis.Where(a => a.Children.Any())
+                                             .Sum(a => 4 + 4 * a.Children.Count());
+
+        var groups = catalog.AllApis.GroupBy(a => a.Kind)
+            .Select(g => (Kind: g.Key, Count: g.Count()))
+            .ToArray();
+        
+        foreach (var g in groups)
+            Console.WriteLine(g);
+
+        const int TypeRowSize = 4 + 4 + 4 + 4 + 4;
+        const int MethodRowSize = 4 + 4 + 4;
+        const int ParameterRowSize = 4 + 2 + 4;
+        const int FieldRowSize = 4 + 4;
+        const int PropertyRowSize = 4 + 4;
+        const int PropertyMapRowSize = 4 + 4;
+        const int EventRowSize = 4 + 4;
+        const int EventMapRowSize = 4 + 4;
+        const int GenericParameterRowSize = 4 + 2 + 4;
+
+        const int NamespaceDeclarationRowSize = 4;
+        const int TypeDeclarationRowSize = 4 + 4;
+        const int MethodDeclarationRowSize = 4 + 4;
+        const int ParameterDeclarationRowSize = 4 + 4;
+        const int FieldDeclarationRowSize = 4 + 4;
+        const int PropertyDeclarationRowSize = 4 + 4;
+        const int EventDeclarationRowSize = 4 + 4;
+        const int GenericParameterDeclarationRowSize = 4 + 4;
+        const int GenericParameterConstraintDeclarationRowSize = 4 + 4;
+        const int CustomAttributeDeclarationsRowSize = 4 + 4 + 4 + 4;
+        
+        var numberOfTypes = catalog.AllApis.Count(IsType);
+        var numberOfMethods = catalog.AllApis.Count(IsMethod);
+        var numberOfParameters = catalog.AllApis.Sum(GetParameterCount);
+        var numberOfFields = catalog.AllApis.Count(IsField);
+        var numberOfProperties = catalog.AllApis.Count(IsProperty);
+        var numberOfPropertyMaps = catalog.AllApis.Sum(GetPropertyMapCount);
+        var numberOfEvents = catalog.AllApis.Count(IsEvent);
+        var numberOfEventMaps = catalog.AllApis.Sum(GetEventMapCount);
+        var numberOfGenericParameters = catalog.AllApis.Sum(GetGenericParameterCount);
+        
+        var numberOfTypeDeclarations = catalog.AllApis.Where(IsType).Sum(a => a.Declarations.Count());
+        var numberOfMethodDeclarations = catalog.AllApis.Where(IsMethod).Sum(a => a.Declarations.Count());
+        var numberOfParameterDeclarations = catalog.AllApis.Sum(a => GetParameterCount(a) * a.Declarations.Count());
+        var numberOfFieldDeclarations = catalog.AllApis.Where(IsField).Sum(a => a.Declarations.Count());
+        var numberOfPropertyDeclarations = catalog.AllApis.Where(IsProperty).Sum(a => a.Declarations.Count());
+        var numberOfEventDeclarations = catalog.AllApis.Where(IsEvent).Sum(a => a.Declarations.Count());
+        var numberOfGenericParameterDeclarations = catalog.AllApis.Sum(a => GetGenericParameterCount(a) * a.Declarations.Count());
+        
+        var TypeTableSize = numberOfTypes * TypeRowSize;
+        var MethodTableSize = numberOfMethods * MethodRowSize;
+        var ParameterTableSize = numberOfParameters * ParameterRowSize;
+        var FieldTableSize = numberOfFields * FieldRowSize;
+        var PropertyTableSize = numberOfProperties * PropertyRowSize;
+        var PropertyMapTableSize = numberOfPropertyMaps * PropertyMapRowSize;
+        var EventTableSize = numberOfEvents * EventRowSize;
+        var EventMapTableSize = numberOfEventMaps * EventMapRowSize;
+        var GenericParameterTableSize = numberOfGenericParameters * GenericParameterRowSize;
+
+        var TypeDeclarationTableSize = numberOfTypeDeclarations * TypeDeclarationRowSize;
+        var MethodDeclarationTableSize = numberOfMethodDeclarations * MethodDeclarationRowSize;
+        var ParameterDeclarationTableSize = numberOfParameterDeclarations * ParameterDeclarationRowSize;
+        var FieldDeclarationTableSize = numberOfFieldDeclarations * FieldDeclarationRowSize;
+        var PropertyDeclarationTableSize = numberOfPropertyDeclarations * PropertyDeclarationRowSize;
+        var EventDeclarationTableSize = numberOfEventDeclarations * EventDeclarationRowSize;
+        var GenericParameterDeclarationTableSize = numberOfGenericParameterDeclarations * GenericParameterDeclarationRowSize;
+
+        var TotalSize = TypeTableSize + MethodTableSize + ParameterTableSize + FieldTableSize + PropertyTableSize + PropertyMapTableSize + EventTableSize + EventMapTableSize + GenericParameterTableSize + TypeDeclarationTableSize + MethodDeclarationTableSize + ParameterDeclarationTableSize + FieldDeclarationTableSize + PropertyDeclarationTableSize + EventDeclarationTableSize + GenericParameterDeclarationTableSize;
+
+        Console.WriteLine($"#Types                        : {numberOfTypes,12:N0}");
+        Console.WriteLine($"#Methods                      : {numberOfMethods,12:N0}");
+        Console.WriteLine($"#Parameters                   : {numberOfParameters,12:N0}");
+        Console.WriteLine($"#Fields                       : {numberOfFields,12:N0}");
+        Console.WriteLine($"#Properties                   : {numberOfProperties,12:N0}");
+        Console.WriteLine($"#PropertyMaps                 : {numberOfPropertyMaps,12:N0}");
+        Console.WriteLine($"#Events                       : {numberOfEvents,12:N0}");
+        Console.WriteLine($"#EventMaps                    : {numberOfEventMaps,12:N0}");
+        Console.WriteLine($"#GenericParameters            : {numberOfGenericParameters,12:N0}");
+        Console.WriteLine($"#TypeDeclarations             : {numberOfTypeDeclarations,12:N0}");
+        Console.WriteLine($"#MethodDeclarations           : {numberOfMethodDeclarations,12:N0}");
+        Console.WriteLine($"#ParameterDeclarations        : {numberOfParameterDeclarations,12:N0}");
+        Console.WriteLine($"#FieldDeclarations            : {numberOfFieldDeclarations,12:N0}");
+        Console.WriteLine($"#PropertyDeclarations         : {numberOfPropertyDeclarations,12:N0}");
+        Console.WriteLine($"#EventDeclarations            : {numberOfEventDeclarations,12:N0}");
+        Console.WriteLine($"#GenericParameterDeclarations : {numberOfGenericParameterDeclarations,12:N0}");
+        Console.WriteLine();
+        Console.WriteLine($"TypeTableSize                        : {TypeTableSize,12:N0}");
+        Console.WriteLine($"MethodTableSize                      : {MethodTableSize,12:N0}");
+        Console.WriteLine($"ParameterTableSize                   : {ParameterTableSize,12:N0}");
+        Console.WriteLine($"FieldTableSize                       : {FieldTableSize,12:N0}");
+        Console.WriteLine($"PropertyTableSize                    : {PropertyTableSize,12:N0}");
+        Console.WriteLine($"PropertyMapTableSize                 : {PropertyMapTableSize,12:N0}");
+        Console.WriteLine($"EventTableSize                       : {EventTableSize,12:N0}");
+        Console.WriteLine($"EventMapTableSize                    : {EventMapTableSize,12:N0}");
+        Console.WriteLine($"GenericParameterTableSize            : {GenericParameterTableSize,12:N0}");
+        Console.WriteLine();
+        Console.WriteLine($"TypeDeclarationTableSize             : {TypeDeclarationTableSize,12:N0}");
+        Console.WriteLine($"MethodDeclarationTableSize           : {MethodDeclarationTableSize,12:N0}");
+        Console.WriteLine($"ParameterDeclarationTableSize        : {ParameterDeclarationTableSize,12:N0}");
+        Console.WriteLine($"FieldDeclarationTableSize            : {FieldDeclarationTableSize,12:N0}");
+        Console.WriteLine($"PropertyDeclarationTableSize         : {PropertyDeclarationTableSize,12:N0}");
+        Console.WriteLine($"EventDeclarationTableSize            : {EventDeclarationTableSize,12:N0}");
+        Console.WriteLine($"GenericParameterDeclarationTableSize : {GenericParameterDeclarationTableSize,12:N0}");
+        Console.WriteLine();
+        Console.WriteLine($"TotalSize                            : {TotalSize,12:N0}");
+
+        
+        return 0;
+        
         if (args.Length > 1)
         {
             var exeName = Path.GetFileNameWithoutExtension(typeof(Program).Assembly.Location);
