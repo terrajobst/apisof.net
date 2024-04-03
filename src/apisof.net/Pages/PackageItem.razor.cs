@@ -1,4 +1,6 @@
-﻿using ApisOfDotNet.Services;
+﻿#nullable enable
+using ApisOfDotNet.Services;
+using ApisOfDotNet.Shared;
 using Microsoft.AspNetCore.Components;
 using NuGet.Frameworks;
 using NuGet.Versioning;
@@ -6,7 +8,7 @@ using Terrajobst.ApiCatalog;
 
 namespace ApisOfDotNet.Pages;
 
-public partial class PackageItem
+public partial class PackageItem : IApiOutlineOwner
 {
     [Inject]
     public required CatalogService CatalogService { get; set; }
@@ -15,34 +17,52 @@ public partial class PackageItem
     public required NavigationManager NavigationManager { get; set; }
 
     [Parameter]
-    public string PackageName { get; set; }
+    public string? PackageName { get; set; }
+
+    [Parameter]
+    public string? PackageVersion { get; set; }
+
+    [Parameter]
+    public string? ApiGuidText { get; set; }
 
     [SupplyParameterFromQuery(Name = "p")]
-    public string CurrentPage { get; set; }
+    public string? CurrentPage { get; set; }
 
     public PackageModel? Package { get; set; }
 
+    public ApiOutlineData? OutlineData { get; set; }
+
+    private ApiFilter _apiFilter = ApiFilter.Everything;
+
     protected override void OnParametersSet()
     {
-        PackageName ??= "";
-        Package = PackageName.Split('/') switch {
-            [var name] =>
+        Package = (PackageName, PackageVersion) switch {
+            (not (null or ""), null or "") =>
                 CatalogService.Catalog.Packages
-                    .Where(a => string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase))
+                    .Where(a => string.Equals(a.Name, PackageName, StringComparison.OrdinalIgnoreCase))
                     .OrderByDescending(a => NuGetVersion.Parse(a.Version))
                     .Cast<PackageModel?>()
                     .FirstOrDefault(),
-            [var name, var version] =>
+            (not (null or ""), not (null or "")) =>
                 CatalogService.Catalog.Packages
-                    .Where(a => string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase) &&
-                                string.Equals(a.Version, version, StringComparison.OrdinalIgnoreCase))
+                    .Where(a => string.Equals(a.Name, PackageName, StringComparison.OrdinalIgnoreCase) &&
+                                string.Equals(a.Version, PackageVersion, StringComparison.OrdinalIgnoreCase))
                     .Cast<PackageModel?>()
                     .FirstOrDefault(),
             _ => null
         };
 
+        if (Package is not null)
+        {
+            OutlineData = ApiGuidText is null
+                ? ApiOutlineData.CreateRoot(Package.Value)
+                : ApiOutlineData.CreateNode(CatalogService.Catalog, ApiGuidText);
+            
+            _apiFilter = ApiFilter.ForPackage(Package.Value);
+        }
+        
         if (string.IsNullOrEmpty(CurrentPage))
-            CurrentPage = "assemblies";
+            CurrentPage = "apis";
     }
 
     public IEnumerable<(FrameworkModel Framework, IReadOnlyList<AssemblyModel> Assemblies)> Assemblies
@@ -79,5 +99,25 @@ public partial class PackageItem
                 .Where(p => string.Equals(Package.Value.Name, p.Name, StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(p => NuGetVersion.Parse(p.Version));
         }
+    }
+
+    string IApiOutlineOwner.Link(ApiModel api)
+    {
+        return Link.For(Package!.Value, api);
+    }
+
+    string IApiOutlineOwner.Link(ExtensionMethodModel api)
+    {
+        return Link.For(Package!.Value, api);
+    }
+
+    bool IApiOutlineOwner.IsIncluded(ApiModel api)
+    {
+        return _apiFilter.IsIncluded(api);
+    }
+
+    bool IApiOutlineOwner.IsSupported(ApiModel api)
+    {
+        return true;
     }
 }

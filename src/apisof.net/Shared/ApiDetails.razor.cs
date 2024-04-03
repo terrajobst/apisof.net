@@ -51,10 +51,10 @@ public partial class ApiDetails
 
     protected override async Task OnParametersSetAsync()
     {
-        await UpdateSyntaxAsync();
+        await UpdateApiAsync();
     }
 
-    private async Task UpdateSyntaxAsync()
+    private async Task UpdateApiAsync()
     {
         Availability = CatalogService.AvailabilityContext.GetAvailability(Api);
         SelectedAvailability = Availability.Frameworks.FirstOrDefault(fx => fx.Framework == ApiView.Framework) ??

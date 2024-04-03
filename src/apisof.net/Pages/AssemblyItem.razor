@@ -1,4 +1,5 @@
 ﻿@page "/catalog/assemblies/{GuidText}"
+@page "/catalog/assemblies/{GuidText}/apis/{ApiGuidText}"
 
 @if (Assembly is null)
 {
@@ -15,7 +16,16 @@ else
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><Glyph Kind="GlyphKind.Database" /> <a href="@Link.ForCatalog()">Catalog</a></li>
                 <li class="breadcrumb-item"><a href="@Link.ForAssemblies()">Assemblies</a></li>
-                <li class="breadcrumb-item"><Glyph Kind="GlyphKind.Assembly" /> @Assembly.ToString()</li>
+                <li class="breadcrumb-item"><Glyph Kind="GlyphKind.Assembly" /> <a href="@Link.For(Assembly.Value)">@Assembly.Value</a></li>
+                
+                @if (OutlineData is ApiOutlineNode node)
+                {
+                    foreach (var b in node.Breadcrumbs)
+                    {
+                        IApiOutlineOwner owner = this;
+                        <li class="breadcrumb-item"><Glyph Kind="b.Kind.GetGlyph()" /> <a href="@owner.Link(b)">@b.Name</a></li>
+                    }
+                }
             </ol>
         </nav>
     </div>
@@ -23,12 +33,16 @@ else
     <div class="container-fluid">
         <ul class="nav nav-tabs mb-2">
             @{
+                var apisActiveClass = CurrentPage == "apis" ? "active" : "";
                 var frameworksActiveClass = CurrentPage == "frameworks" ? "active" : "";
                 var frameworksDisabledClass = Frameworks.Any() ? "" : "disabled";
                 var packagesActiveClass = CurrentPage == "packages" ? "active" : "";
                 var packagesDisabledClass = Packages.Any() ? "" : "disabled";
                 var versionsActiveClass = CurrentPage == "versions" ? "active" : "";
             }
+            <li class="nav-item">
+                <a class="nav-link @apisActiveClass" href="@NavigationManager.GetUriWithQueryParameter("p", "apis")">APIs</a>
+            </li>
             <li class="nav-item">
                 <a class="nav-link @frameworksActiveClass @frameworksDisabledClass" href="@NavigationManager.GetUriWithQueryParameter("p", "frameworks")">Frameworks</a>
             </li>
@@ -40,7 +54,14 @@ else
             </li>
         </ul>
 
-        @if (CurrentPage == "frameworks")
+        @if (CurrentPage == "apis")
+        {
+            if (OutlineData is not null)
+            {
+                <ApiOutline Data="OutlineData" Owner="this"/>
+            }
+        }
+        else if (CurrentPage == "frameworks")
         {
             <ul class="list-unstyled">
                 @foreach (var framework in Frameworks)

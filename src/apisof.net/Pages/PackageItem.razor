@@ -1,4 +1,7 @@
-﻿@page "/catalog/packages/{*PackageName}"
+﻿@page "/catalog/packages/{PackageName}"
+@page "/catalog/packages/{PackageName}/apis/{ApiGuidText}"
+@page "/catalog/packages/{PackageName}/{PackageVersion}"
+@page "/catalog/packages/{PackageName}/{PackageVersion}/apis/{ApiGuidText}"
 
 @if (Package is null)
 {
@@ -15,7 +18,15 @@ else
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><Glyph Kind="GlyphKind.Database" /> <a href="@Link.ForCatalog()">Catalog</a></li>
                 <li class="breadcrumb-item"><a href="@Link.ForPackages()">Packages</a></li>
-                <li class="breadcrumb-item"><Glyph Kind="GlyphKind.Package" /> @Package.Value.Name</li>
+                <li class="breadcrumb-item"><Glyph Kind="GlyphKind.Package" /> <a href="@Link.For(Package.Value)">@Package.Value.Name</a></li>
+                @if (OutlineData is ApiOutlineNode node)
+                {
+                    foreach (var b in node.Breadcrumbs)
+                    {
+                        IApiOutlineOwner owner = this;
+                        <li class="breadcrumb-item"><Glyph Kind="b.Kind.GetGlyph()" /> <a href="@owner.Link(b)">@b.Name</a></li>
+                    }
+                }
             </ol>
         </nav>
     </div>
@@ -24,9 +35,13 @@ else
     
         <ul class="nav nav-tabs mb-2">
             @{
+                var apisActiveClass = CurrentPage == "apis" ? "active" : "";
                 var assembliesActiveClass = CurrentPage == "assemblies" ? "active" : "";
                 var versionsActiveClass = CurrentPage == "versions" ? "active" : "";
             }
+            <li class="nav-item">
+                <a class="nav-link @apisActiveClass" href="@NavigationManager.GetUriWithQueryParameter("p", "apis")">APIs</a>
+            </li>
             <li class="nav-item">
                 <a class="nav-link @assembliesActiveClass" href="@NavigationManager.GetUriWithQueryParameter("p", "assemblies")">Assemblies</a>
             </li>
@@ -35,7 +50,14 @@ else
             </li>
         </ul>
         
-        @if (CurrentPage == "assemblies")
+        @if (CurrentPage == "apis")
+        {
+            if (OutlineData is not null)
+            {
+                <ApiOutline Data="OutlineData" Owner="this"/>
+            }
+        }
+        else if (CurrentPage == "assemblies")
         {
             <ul class="list-unstyled">
                 @foreach (var (framework, assemblies) in Assemblies)

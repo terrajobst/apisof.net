@@ -1,0 +1,70 @@
+<ul class="col-md-3 list-unstyled overflow-hidden text-nowrap border-right">
+    @if (Data is ApiOutlineRoot root)
+    {
+        foreach (var api in root.Entries.Where(Owner.IsIncluded))
+        {
+            var unsupportedClass = Owner.IsSupported(api) ? "" : "text-muted";
+            <li>
+                <Glyph Kind="@api.Kind.GetGlyph()"/>
+                <a class="@unsupportedClass" href="@Owner.Link(api)">@api.Name</a>
+            </li>
+        }
+    }
+    else if (Data is ApiOutlineNode node)
+    {
+        var rootUnsupportedClass = Owner.IsSupported(node.Parent) ? "" : "text-muted";
+
+        <li>
+
+            @if (node.Parent == node.Api)
+            {
+                <Glyph Kind="@node.Parent.Kind.GetGlyph()"/>
+                <span class="font-weight-bold @rootUnsupportedClass">@node.Parent.Name</span>
+            }
+            else
+            {
+                <Glyph Kind="@node.Parent.Kind.GetGlyph()"/>
+                <a class="@rootUnsupportedClass" href="@Owner.Link(node.Parent)">@node.Parent.Name</a>
+            }
+
+            <ul class="list-unstyled pl-4">
+                @foreach (var child in node.Parent.Children.Where(Owner.IsIncluded).OrderBy(x => x))
+                {
+                    var childUnsupportedClass = Owner.IsSupported(child) ? "" : "text-muted";
+
+                    <li>
+                        @if (child == node.Api)
+                        {
+                            <Glyph Kind="@child.Kind.GetGlyph()"/>
+                            <span class="font-weight-bold @childUnsupportedClass">@child.Name</span>
+                        }
+                        else
+                        {
+                            <Glyph Kind="@child.Kind.GetGlyph()"/>
+                            <a class="@childUnsupportedClass" href="@Owner.Link(child)">@child.Name</a>
+                        }
+                    </li>
+                }
+
+                @foreach (var extensionMethod in node.Parent.ExtensionMethods.Where(m => Owner.IsIncluded(m.ExtensionMethod)).OrderBy(em => em.ExtensionMethod))
+                {
+                    var child = extensionMethod.ExtensionMethod;
+                    var childUnsupportedClass = Owner.IsSupported(child) ? "" : "text-muted";
+
+                    <li>
+                        @if (extensionMethod == node.ExtensionMethod)
+                        {
+                            <Glyph Kind="GlyphKind.ExtensionMethod"/>
+                            <span class="font-weight-bold @childUnsupportedClass">@child.Name</span>
+                        }
+                        else
+                        {
+                            <Glyph Kind="GlyphKind.ExtensionMethod"/>
+                            <a class="@childUnsupportedClass" href="@Owner.Link(extensionMethod)">@child.Name</a>
+                        }
+                    </li>
+                }
+            </ul>
+        </li>
+    }
+</ul>
