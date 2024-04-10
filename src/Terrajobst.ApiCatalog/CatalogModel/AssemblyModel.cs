@@ -5,33 +5,34 @@ namespace Terrajobst.ApiCatalog;
 public readonly struct AssemblyModel : IEquatable<AssemblyModel>
 {
     private readonly ApiCatalogModel _catalog;
-    private readonly int _offset;
+    private readonly int _index;
 
-    internal AssemblyModel(ApiCatalogModel catalog, int offset)
+    internal AssemblyModel(ApiCatalogModel catalog, int index)
     {
-        ApiCatalogSchema.EnsureValidOffset(catalog.AssemblyTable, ApiCatalogSchema.AssemblyRow.Size, offset);
+        ThrowIfNull(catalog);
+        ThrowIfRowIndexOutOfRange(catalog, ApiCatalogHeapOrTable.AssemblyTable, index);
 
         _catalog = catalog;
-        _offset = offset;
+        _index = index;
     }
+
+    public int Id => _index;
 
     public ApiCatalogModel Catalog => _catalog;
 
-    public int Id => _offset;
+    public Guid Guid => ApiCatalogSchema.AssemblyRow.Guid.Read(_catalog, _index);
 
-    public Guid Guid => ApiCatalogSchema.AssemblyRow.Guid.Read(_catalog, _offset);
+    public string Name => ApiCatalogSchema.AssemblyRow.Name.Read(_catalog, _index);
 
-    public string Name => ApiCatalogSchema.AssemblyRow.Name.Read(_catalog, _offset);
+    public string PublicKeyToken => ApiCatalogSchema.AssemblyRow.PublicKeyToken.Read(_catalog, _index);
 
-    public string PublicKeyToken => ApiCatalogSchema.AssemblyRow.PublicKeyToken.Read(_catalog, _offset);
-
-    public string Version => ApiCatalogSchema.AssemblyRow.Version.Read(_catalog, _offset);
+    public string Version => ApiCatalogSchema.AssemblyRow.Version.Read(_catalog, _index);
 
     public RootApiEnumerator RootApis
     {
         get
         {
-            var enumerator = ApiCatalogSchema.AssemblyRow.RootApis.Read(_catalog, _offset);
+            var enumerator = ApiCatalogSchema.AssemblyRow.RootApis.Read(_catalog, _index);
             return new RootApiEnumerator(enumerator);
         }
     }
@@ -40,7 +41,7 @@ public readonly struct AssemblyModel : IEquatable<AssemblyModel>
     {
         get
         {
-            var enumerator = ApiCatalogSchema.AssemblyRow.Frameworks.Read(_catalog, _offset);
+            var enumerator = ApiCatalogSchema.AssemblyRow.Frameworks.Read(_catalog, _index);
             return new FrameworkEnumerator(enumerator);
         }
     }
@@ -49,7 +50,7 @@ public readonly struct AssemblyModel : IEquatable<AssemblyModel>
     {
         get
         {
-            var enumerator = ApiCatalogSchema.AssemblyRow.Packages.Read(_catalog, _offset);
+            var enumerator = ApiCatalogSchema.AssemblyRow.Packages.Read(_catalog, _index);
             return new PackageEnumerator(enumerator);
         }
     }
@@ -86,12 +87,12 @@ public readonly struct AssemblyModel : IEquatable<AssemblyModel>
     public bool Equals(AssemblyModel other)
     {
         return ReferenceEquals(_catalog, other._catalog) &&
-               _offset == other._offset;
+               _index == other._index;
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(_catalog, _offset);
+        return HashCode.Combine(_catalog, _index);
     }
 
     public static bool operator ==(AssemblyModel left, AssemblyModel right)

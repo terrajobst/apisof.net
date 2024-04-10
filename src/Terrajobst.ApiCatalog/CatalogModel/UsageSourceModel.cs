@@ -3,23 +3,24 @@ namespace Terrajobst.ApiCatalog;
 public readonly struct UsageSourceModel : IEquatable<UsageSourceModel>
 {
     private readonly ApiCatalogModel _catalog;
-    private readonly int _offset;
+    private readonly int _index;
 
-    internal UsageSourceModel(ApiCatalogModel catalog, int offset)
+    internal UsageSourceModel(ApiCatalogModel catalog, int index)
     {
-        ApiCatalogSchema.EnsureValidOffset(catalog.UsageSourceTable, ApiCatalogSchema.UsageSourceRow.Size, offset);
+        ThrowIfNull(catalog);
+        ThrowIfRowIndexOutOfRange(catalog, ApiCatalogHeapOrTable.UsageSourceTable, index);
 
         _catalog = catalog;
-        _offset = offset;
+        _index = index;
     }
+
+    public int Id => _index;
 
     public ApiCatalogModel Catalog => _catalog;
 
-    public int Id => _offset;
+    public string Name => ApiCatalogSchema.UsageSourceRow.Name.Read(_catalog, _index);
 
-    public string Name => ApiCatalogSchema.UsageSourceRow.Name.Read(_catalog, _offset);
-
-    public DateOnly Date => ApiCatalogSchema.UsageSourceRow.Date.Read(_catalog, _offset);
+    public DateOnly Date => ApiCatalogSchema.UsageSourceRow.Date.Read(_catalog, _index);
 
     public override bool Equals(object? obj)
     {
@@ -29,12 +30,12 @@ public readonly struct UsageSourceModel : IEquatable<UsageSourceModel>
     public bool Equals(UsageSourceModel other)
     {
         return ReferenceEquals(_catalog, other._catalog) &&
-               _offset == other._offset;
+               _index == other._index;
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(_catalog, _offset);
+        return HashCode.Combine(_catalog, _index);
     }
 
     public static bool operator ==(UsageSourceModel left, UsageSourceModel right)

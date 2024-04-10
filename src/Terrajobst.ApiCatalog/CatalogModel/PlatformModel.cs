@@ -3,19 +3,22 @@
 public readonly struct PlatformModel : IEquatable<PlatformModel>
 {
     private readonly ApiCatalogModel _catalog;
-    private readonly int _offset;
+    private readonly int _index;
 
-    internal PlatformModel(ApiCatalogModel catalog, int offset)
+    internal PlatformModel(ApiCatalogModel catalog, int index)
     {
-        ApiCatalogSchema.EnsureValidOffset(catalog.PlatformTable, ApiCatalogSchema.PlatformRow.Size, offset);
+        ThrowIfNull(catalog);
+        ThrowIfRowIndexOutOfRange(catalog, ApiCatalogHeapOrTable.PlatformTable, index);
 
         _catalog = catalog;
-        _offset = offset;
+        _index = index;
     }
 
+    public int Id => _index;
+    
     public ApiCatalogModel Catalog => _catalog;
 
-    public string Name => ApiCatalogSchema.PlatformRow.Name.Read(_catalog, _offset);
+    public string Name => ApiCatalogSchema.PlatformRow.Name.Read(_catalog, _index);
 
     public override bool Equals(object? obj)
     {
@@ -25,12 +28,12 @@ public readonly struct PlatformModel : IEquatable<PlatformModel>
     public bool Equals(PlatformModel other)
     {
         return ReferenceEquals(_catalog, other._catalog) &&
-               _offset == other._offset;
+               _index == other._index;
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(_catalog, _offset);
+        return HashCode.Combine(_catalog, _index);
     }
 
     public static bool operator ==(PlatformModel left, PlatformModel right)

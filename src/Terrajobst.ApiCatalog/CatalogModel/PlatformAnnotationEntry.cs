@@ -4,6 +4,8 @@ public readonly struct PlatformAnnotationEntry : IEquatable<PlatformAnnotationEn
 {
     public PlatformAnnotationEntry(string name, PlatformSupportRange range)
     {
+        ThrowIfNullOrEmpty(name);
+        
         Name = name;
         Range = range;
     }
@@ -22,6 +24,8 @@ public readonly struct PlatformAnnotationEntry : IEquatable<PlatformAnnotationEn
 
     public static string FormatPlatform(string name)
     {
+        ThrowIfNullOrEmpty(name);
+        
         return name.ToLowerInvariant() switch
         {
             "android" => "Android",

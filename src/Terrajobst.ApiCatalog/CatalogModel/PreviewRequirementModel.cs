@@ -3,19 +3,24 @@
 public readonly struct PreviewRequirementModel
 {
     private readonly ApiCatalogModel _catalog;
-    private readonly int _offset;
+    private readonly int _index;
 
-    internal PreviewRequirementModel(ApiCatalogModel catalog, int offset)
+    internal PreviewRequirementModel(ApiCatalogModel catalog, int index)
     {
-        ApiCatalogSchema.EnsureValidOffset(catalog.PreviewRequirementTable, ApiCatalogSchema.PreviewRequirementRow.Size, offset);
+        ThrowIfNull(catalog);
+        ThrowIfRowIndexOutOfRange(catalog, ApiCatalogHeapOrTable.PreviewRequirementTable, index);
 
         _catalog = catalog;
-        _offset = offset;
+        _index = index;
     }
 
-    public string Message => ApiCatalogSchema.PreviewRequirementRow.Message.Read(_catalog, _offset);
+    public int Id => _index;
 
-    public string Url => ApiCatalogSchema.PreviewRequirementRow.Url.Read(_catalog, _offset);
+    public ApiCatalogModel Catalog => _catalog;
+
+    public string Message => ApiCatalogSchema.PreviewRequirementRow.Message.Read(_catalog, _index);
+
+    public string Url => ApiCatalogSchema.PreviewRequirementRow.Url.Read(_catalog, _index);
 
     public override bool Equals(object? obj)
     {
@@ -25,12 +30,12 @@ public readonly struct PreviewRequirementModel
     public bool Equals(PreviewRequirementModel other)
     {
         return ReferenceEquals(_catalog, other._catalog) &&
-               _offset == other._offset;
+               _index == other._index;
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(_catalog, _offset);
+        return HashCode.Combine(_catalog, _index);
     }
 
     public static bool operator ==(PreviewRequirementModel left, PreviewRequirementModel right)

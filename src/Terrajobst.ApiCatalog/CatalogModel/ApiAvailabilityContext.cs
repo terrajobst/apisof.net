@@ -91,6 +91,8 @@ internal sealed class ApiAvailabilityContext
 
     public FrameworkModel? GetFramework(NuGetFramework framework)
     {
+        ThrowIfNull(framework);
+        
         if (_frameworkIds.TryGetValue(framework, out var id))
             return new FrameworkModel(_catalog, id);
 
@@ -99,6 +101,9 @@ internal sealed class ApiAvailabilityContext
 
     public bool IsAvailable(ApiModel api, NuGetFramework framework)
     {
+        ThrowIfDefault(api);
+        ThrowIfNull(framework);
+        
         var frameworkId = _frameworkIds[framework];
         var frameworkAssemblies = _frameworkAssemblies[frameworkId];
         var packageAssemblies = _packageAssemblies[frameworkId];
@@ -115,6 +120,9 @@ internal sealed class ApiAvailabilityContext
 
     public ApiDeclarationModel? GetDefinition(ApiModel api, NuGetFramework framework)
     {
+        ThrowIfDefault(api);
+        ThrowIfNull(framework);
+
         var frameworkId = _frameworkIds[framework];
         var frameworkAssemblies = _frameworkAssemblies[frameworkId];
 
@@ -130,6 +138,8 @@ internal sealed class ApiAvailabilityContext
 
     public ApiAvailability GetAvailability(ApiModel api)
     {
+        ThrowIfDefault(api);
+
         var result = new List<ApiFrameworkAvailability>();
 
         foreach (var nugetFramework in _frameworkIds.Keys)
@@ -142,9 +152,12 @@ internal sealed class ApiAvailabilityContext
         return new ApiAvailability(result.ToArray());
     }
 
-    public ApiFrameworkAvailability? GetAvailability(ApiModel api, NuGetFramework nugetFramework)
+    public ApiFrameworkAvailability? GetAvailability(ApiModel api, NuGetFramework framework)
     {
-        if (_frameworkIds.TryGetValue(nugetFramework, out var frameworkId))
+        ThrowIfDefault(api);
+        ThrowIfNull(framework);
+        
+        if (_frameworkIds.TryGetValue(framework, out var frameworkId))
         {
             // Try to resolve an in-box assembly
 
@@ -154,7 +167,7 @@ internal sealed class ApiAvailabilityContext
                 {
                     if (frameworkAssemblies.Contains(declaration.Assembly.Id))
                     {
-                        return new ApiFrameworkAvailability(nugetFramework, declaration, null, null);
+                        return new ApiFrameworkAvailability(framework, declaration, null, null);
                     }
                 }
             }
@@ -170,7 +183,7 @@ internal sealed class ApiAvailabilityContext
                         var package = new PackageModel(_catalog, packageInfo.PackageId);
                         var packageFramework = new FrameworkModel(_catalog, packageInfo.FrameworkId);
                         var nugetPackageFramework = NuGetFramework.Parse(packageFramework.Name);
-                        return new ApiFrameworkAvailability(nugetFramework, declaration, package, nugetPackageFramework);
+                        return new ApiFrameworkAvailability(framework, declaration, package, nugetPackageFramework);
                     }
                 }
             }

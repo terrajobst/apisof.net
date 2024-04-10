@@ -13,22 +13,22 @@ internal static class OffsetTag
     public sealed class ApiUsage;
 }
 
-internal readonly struct Offset<T>(int value) : IEquatable<Offset<T>>
+internal readonly struct Handle<T>(int value) : IEquatable<Handle<T>>
 {
-    public static Offset<T> Nil { get; } = new(-1);
+    public static Handle<T> Nil { get; } = new(-1);
 
     public bool IsNil => this == Nil;
 
     public int Value { get; } = value;
 
-    public bool Equals(Offset<T> other)
+    public bool Equals(Handle<T> other)
     {
         return Value == other.Value;
     }
 
     public override bool Equals(object? obj)
     {
-        return obj is Offset<T> other && Equals(other);
+        return obj is Handle<T> other && Equals(other);
     }
 
     public override int GetHashCode()
@@ -36,13 +36,18 @@ internal readonly struct Offset<T>(int value) : IEquatable<Offset<T>>
         return Value;
     }
 
-    public static bool operator ==(Offset<T> left, Offset<T> right)
+    public static bool operator ==(Handle<T> left, Handle<T> right)
     {
         return left.Equals(right);
     }
 
-    public static bool operator !=(Offset<T> left, Offset<T> right)
+    public static bool operator !=(Handle<T> left, Handle<T> right)
     {
         return !left.Equals(right);
+    }
+
+    public override string ToString()
+    {
+        return $"{Value} ({typeof(T).Name})";
     }
 }

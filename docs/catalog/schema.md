@@ -20,7 +20,7 @@ will need to be decompressed.
 | 8      | 56     | `Int32[14]` | Table Sizes |
 
 - The magic value is `APICATFB`
-- This is version `7`
+- This is version `9`
 - The table sizes are in the following order:
   1. [String Heap]
   1. [Blob Heap]
@@ -57,7 +57,7 @@ Each row looks as follows:
 
 | Offset | Length | Type           | Name          |
 | ------ | ------ | -------------- | ------------- |
-| 0      | 4      | `StringOffset` | Platform Name |
+| 0      | 4      | `StringHandle` | Platform Name |
 
 ## Framework Table
 
@@ -65,8 +65,8 @@ Each row looks as follows:
 
 | Offset | Length | Type                               | Name           |
 | ------ | ------ | ---------------------------------- | -------------- |
-| 0      | 4      | `StringOffset`                     | Framework Name |
-| 4      | 4      | `BlobOffset` -> `AssemblyOffset[]` | Assemblies     |
+| 0      | 4      | `StringHandle`                     | Framework Name |
+| 4      | 4      | `BlobHandle` -> `AssemblyHandle[]` | Assemblies     |
 
 ## Package Table
 
@@ -74,9 +74,9 @@ Each row looks as follows:
 
 | Offset | Length | Type                                                  | Name            |
 | ------ | ------ | ----------------------------------------------------- | --------------- |
-| 0      | 4      | `StringOffset`                                        | Package Name    |
-| 4      | 4      | `StringOffset`                                        | Package Version |
-| 8      | 4      | `BlobOffset` -> `(FrameworkOffset, AssemblyOffset)[]` | Assemblies      |
+| 0      | 4      | `StringHandle`                                        | Package Name    |
+| 4      | 4      | `StringHandle`                                        | Package Version |
+| 8      | 4      | `BlobHandle` -> `(FrameworkHandle, AssemblyHandle)[]` | Assemblies      |
 
 ## Assembly Table
 
@@ -85,12 +85,12 @@ Each row looks as follows:
 | Offset | Length | Type                                                 | Name           |
 | ------ | ------ | ---------------------------------------------------- | -------------- |
 | 0      | 16     | `GUID`                                               | Fingerprint    |
-| 16     | 4      | `StringOffset`                                       | Name           |
-| 20     | 4      | `StringOffset`                                       | PublicKeyToken |
-| 24     | 4      | `StringOffset`                                       | Version        |
-| 28     | 4      | `BlobOffset` -> `ApiOffset[]`                        | Root APIs      |
-| 32     | 4      | `BlobOffset` -> `FrameworkOffset[]`                  | Frameworks     |
-| 36     | 8      | `BlobOffset` -> `(PackageOffset, FrameworkOffset)[]` | Packages       |
+| 16     | 4      | `StringHandle`                                       | Name           |
+| 20     | 4      | `StringHandle`                                       | PublicKeyToken |
+| 24     | 4      | `StringHandle`                                       | Version        |
+| 28     | 4      | `BlobHandle` -> `ApiHandle[]`                        | Root APIs      |
+| 32     | 4      | `BlobHandle` -> `FrameworkHandle[]`                  | Frameworks     |
+| 36     | 8      | `BlobHandle` -> `(PackageHandle, FrameworkHandle)[]` | Packages       |
 
 ## Usage Source Table
 
@@ -98,7 +98,7 @@ Each row looks as follows:
 
 | Offset | Length | Type           | Name              |
 | ------ | ------ | -------------- | ----------------- |
-| 0      | 4      | `StringOffset` | Usage Source Name |
+| 0      | 4      | `StringHandle` | Usage Source Name |
 | 4      | 4      | `Int32`        | Day number        |
 
 > [!NOTE]
@@ -114,11 +114,11 @@ Each row looks as follows:
 | ------ | ------ | ------------------------------------------------ | ------------ |
 | 0      | 16     | `GUID`                                           | Fingerprint  |
 | 16     | 1      | `Byte`                                           | API kind     |
-| 17     | 4      | `ApiOffset`                                      | Parent       |
-| 21     | 4      | `StringOffset`                                   | Name         |
-| 25     | 4      | `BlobOffset` -> `ApiOffset[]`                    | Children     |
-| 29     | 4      | `BlobOffset` -> `(AssemblyOffset, BlobOffset)[]` | Declarations |
-| 33     | 4      | `BlobOffset` -> `(UsageSourceOffset, float)`     | Usages       |
+| 17     | 4      | `ApiHandle`                                      | Parent       |
+| 21     | 4      | `StringHandle`                                   | Name         |
+| 25     | 4      | `BlobHandle` -> `ApiHandle[]`                    | Children     |
+| 29     | 4      | `BlobHandle` -> `(AssemblyHandle, BlobHandle)[]` | Declarations |
+| 33     | 4      | `BlobHandle` -> `(UsageSourceHandle, float)`     | Usages       |
 
 ## Root API Table
 
@@ -126,7 +126,7 @@ Each row looks as follows:
 
 | Offset | Length | Type        | Name |
 | ------ | ------ | ----------- | ---- |
-| 0      | 4      | `ApiOffset` | API  |
+| 0      | 4      | `ApiHandle` | API  |
 
 ## Extension Methods Table
 
@@ -135,8 +135,8 @@ Each row looks as follows:
 | Offset | Length | Type        | Name                  |
 | ------ | ------ | ----------- | --------------------- |
 | 0      | 4      | `GUID`      | Extension Method GUID |
-| 4      | 4      | `ApiOffset` | Extended Type         |
-| 8      | 4      | `ApiOffset` | Extension Method      |
+| 4      | 4      | `ApiHandle` | Extended Type         |
+| 8      | 4      | `ApiHandle` | Extension Method      |
 
 ## Obsoletion Table
 
@@ -144,12 +144,12 @@ Each row looks as follows:
 
 | Offset | Length | Type             | Name          |
 | ------ | ------ | ---------------- | ------------- |
-| 0      | 4      | `ApiOffset`      | API           |
-| 4      | 4      | `AssemblyOffset` | Assembly      |
-| 8      | 4      | `StringOffset`   | Message       |
+| 0      | 4      | `ApiHandle`      | API           |
+| 4      | 4      | `AssemblyHandle` | Assembly      |
+| 8      | 4      | `StringHandle`   | Message       |
 | 12     | 1      | `Boolean`        | Is Error      |
-| 13     | 4      | `StringOffset`   | Diagnostic ID |
-| 17     | 4      | `StringOffset`   | URL Format    |
+| 13     | 4      | `StringHandle`   | Diagnostic ID |
+| 17     | 4      | `StringHandle`   | URL Format    |
 
 - The rows are sorted by API and Assembly, to allow binary search based on them.
 
@@ -157,11 +157,11 @@ Each row looks as follows:
 
 Each row looks as follows:
 
-| Offset | Length | Type                                        | Name         |
-| ------ | ------ | ------------------------------------------- | ------------ |
-| 0      | 4      | `ApiOffset`                                 | API          |
-| 4      | 4      | `AssemblyOffset`                            | Assembly     |
-| 8      | 4      | `BlobOffset` -> `(StringOffset, Boolean)[]` | Support      |
+| Offset | Length | Type                                        | Name     |
+| ------ | ------ | ------------------------------------------- | -------- |
+| 0      | 4      | `ApiHandle`                                 | API      |
+| 4      | 4      | `AssemblyHandle`                            | Assembly |
+| 8      | 4      | `BlobHandle` -> `(StringHandle, Boolean)[]` | Support  |
 
 - The rows are sorted by API and Assembly, to allow binary search based on them.
 
@@ -171,10 +171,10 @@ Each row looks as follows:
 
 | Offset | Length | Type             | Name     |
 | ------ | ------ | ---------------- | -------- |
-| 0      | 4      | `ApiOffset`      | API      |
-| 4      | 4      | `AssemblyOffset` | Assembly |
-| 8      | 4      | `StringOffset`   | Message  |
-| 12     | 4      | `StringOffset`   | URL      |
+| 0      | 4      | `ApiHandle`      | API      |
+| 4      | 4      | `AssemblyHandle` | Assembly |
+| 8      | 4      | `StringHandle`   | Message  |
+| 12     | 4      | `StringHandle`   | URL      |
 
 - The rows are sorted by API and Assembly, to allow binary search based on them.
 
@@ -184,10 +184,10 @@ Each row looks as follows:
 
 | Offset | Length | Type             | Name          |
 | ------ | ------ | ---------------- | ------------- |
-| 0      | 4      | `ApiOffset`      | API           |
-| 4      | 4      | `AssemblyOffset` | Assembly      |
-| 8      | 4      | `StringOffset`   | Diagnostic ID |
-| 12     | 4      | `StringOffset`   | URL Format    |
+| 0      | 4      | `ApiHandle`      | API           |
+| 4      | 4      | `AssemblyHandle` | Assembly      |
+| 8      | 4      | `StringHandle`   | Diagnostic ID |
+| 12     | 4      | `StringHandle`   | URL Format    |
 
 - The rows are sorted by API and Assembly, to allow binary search based on them.
 
@@ -201,14 +201,14 @@ elements, not number of bytes.
 
 Element types can either be simple types or tuples:
 
-- `FrameworkOffset[]`
-- `AssemblyOffset[]`
-- `ApiOffset[]`
-- `(FrameworkOffset, AssemblyOffset)[]`
-- `(PackageOffset, FrameworkOffset)[]`
-- `(AssemblyOffset, BlobOffset)[]`
-- `(UsageSourceOffset, Float)[]`
-- `(StringOffset, Boolean)[]`
+- `FrameworkHandle[]`
+- `AssemblyHandle[]`
+- `ApiHandle[]`
+- `(FrameworkHandle, AssemblyHandle)[]`
+- `(PackageHandle, FrameworkHandle)[]`
+- `(AssemblyHandle, BlobHandle)[]`
+- `(UsageSourceHandle, Float)[]`
+- `(StringHandle, Boolean)[]`
 
 Tuples are stored in sequence with no padding or length prefix.
 
@@ -223,25 +223,25 @@ Each `Token` has:
 
 * `Byte` - [Kind](../../src/Terrajobst.ApiCatalog/Markup/MarkupTokenKind.cs)
 * If the token kind isn't a keyword or operator token, it's followed by
-  - `StringOffset` - Text
+  - `StringHandle` - Text
 * If the token kind is `Reference` then the Text field is followed by an
-  `ApiOffset`.
+  `ApiHandle`.
 
 ## Types
 
-| Type                | Representation | Comment                                                      |
-| ------------------- | -------------- | ------------------------------------------------------------ |
-| `GUID`              | `Byte[16]`     | A GUID                                                       |
-| `Boolean`           | `Byte`         | A Boolean with `True` being `1`, `0` otherwise               |
-| `Float`             | `Single`       | A 32-bit floating point                                      |
-| `StringOffset`      | `Int32`        | Points to a length-prefixed string in the [string heap]      |
-| `BlobOffset`        | `Int32`        | Points to data in the [blob heap]. Representation depends.   |
-| `PlatformOffset`    | `Int32`        | Points to the beginning of a row in the [Platform table]     |
-| `FrameworkOffset`   | `Int32`        | Points to the beginning of a row in the [Framework table]    |
-| `PackageOffset`     | `Int32`        | Points to the beginning of a row in the [Package table]      |
-| `AssemblyOffset`    | `Int32`        | Points to the beginning of a row in the [Assembly table]     |
-| `UsageSourceOffset` | `Int32`        | Points to the beginning of a row in the [Usage source table] |
-| `ApiOffset`         | `Int32`        | Points to the beginning of a row in the [API table]          |
+| Type                | Representation | Comment                                                    |
+| ------------------- | -------------- | ---------------------------------------------------------- |
+| `GUID`              | `Byte[16]`     | A GUID                                                     |
+| `Boolean`           | `Byte`         | A Boolean with `True` being `1`, `0` otherwise             |
+| `Float`             | `Single`       | A 32-bit floating point                                    |
+| `StringHandle`      | `Int32`        | Offset to a length-prefixed string in the [string heap]    |
+| `BlobHandle`        | `Int32`        | Offset to data in the [blob heap]. Representation depends. |
+| `PlatformHandle`    | `Int32`        | Index of a row in the [Platform table]                     |
+| `FrameworkHandle`   | `Int32`        | Index of a row in the [Framework table]                    |
+| `PackageHandle`     | `Int32`        | Index of a row in the [Package table]                      |
+| `AssemblyHandle`    | `Int32`        | Index of a row in the [Assembly table]                     |
+| `UsageSourceHandle` | `Int32`        | Index of a row in the [Usage source table]                 |
+| `ApiHandle`         | `Int32`        | Index of a row in the [API table]                          |
 
 [String Heap]: #string-heap
 [Blob Heap]: #blob-heap

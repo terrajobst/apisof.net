@@ -4,23 +4,6 @@ namespace Terrajobst.ApiCatalog;
 
 internal static partial class ApiCatalogSchema
 {
-    internal static void EnsureValidOffset(ReadOnlySpan<byte> table, int rowSize, int offset)
-    {
-        if (offset < 0 ||
-            offset >= table.Length ||
-            offset % rowSize > 0)
-            throw new InvalidDataException($"The offset {offset} is invalid.");
-    }
-
-    internal static void EnsureValidBlobOffset(ApiCatalogModel catalog, int offset)
-    {
-        if (offset < 0 ||
-            offset >= catalog.BlobHeap.Length)
-            throw new InvalidDataException($"The offset {offset} is invalid.");
-    }
-
-    internal delegate ReadOnlySpan<byte> MemorySelector(ApiCatalogModel catalog);
-
     internal abstract class Layout
     {
         public abstract int Size { get; }
@@ -36,12 +19,12 @@ internal static partial class ApiCatalogSchema
 
     internal sealed class LayoutBuilder
     {
-        private readonly MemorySelector _memorySelector;
+        private readonly ApiCatalogHeapOrTable _heapOrTable;
         private Field? _lastField;
 
-        public LayoutBuilder(MemorySelector memorySelector)
+        public LayoutBuilder(ApiCatalogHeapOrTable heapOrTable)
         {
-            _memorySelector = memorySelector;
+            _heapOrTable = heapOrTable;
         }
 
         public int Size => _lastField?.End ?? 0;
@@ -55,79 +38,79 @@ internal static partial class ApiCatalogSchema
 
         public Field<Guid> DefineGuid()
         {
-            return Remember(new GuidField(_memorySelector, Size));
+            return Remember(new GuidField(_heapOrTable, Size));
         }
 
         public Field<int> DefineInt32()
         {
-            return Remember(new Int32Field(_memorySelector, Size));
+            return Remember(new Int32Field(_heapOrTable, Size));
         }
 
         public Field<float> DefineSingle()
         {
-            return Remember(new SingleField(_memorySelector, Size));
+            return Remember(new SingleField(_heapOrTable, Size));
         }
 
         public Field<bool> DefineBoolean()
         {
-            return Remember(new BooleanField(_memorySelector, Size));
+            return Remember(new BooleanField(_heapOrTable, Size));
         }
 
         public Field<string> DefineString()
         {
-            return Remember(new StringField(_memorySelector, Size));
+            return Remember(new StringField(_heapOrTable, Size));
         }
 
         public Field<DateOnly> DefineDate()
         {
-            return Remember(new DateField(_memorySelector, Size));
+            return Remember(new DateField(_heapOrTable, Size));
         }
 
         public Field<ApiKind> DefineApiKind()
         {
-            return Remember(new ApiKindField(_memorySelector, Size));
+            return Remember(new ApiKindField(_heapOrTable, Size));
         }
 
         public Field<FrameworkModel> DefineFramework()
         {
-            return Remember(new FrameworkField(_memorySelector, Size));
+            return Remember(new FrameworkField(_heapOrTable, Size));
         }
 
         public Field<PackageModel> DefinePackage()
         {
-            return Remember(new PackageField(_memorySelector, Size));
+            return Remember(new PackageField(_heapOrTable, Size));
         }
 
         public Field<AssemblyModel> DefineAssembly()
         {
-            return Remember(new AssemblyField(_memorySelector, Size));
+            return Remember(new AssemblyField(_heapOrTable, Size));
         }
 
         public Field<UsageSourceModel> DefineUsageSource()
         {
-            return Remember(new UsageSourceField(_memorySelector, Size));
+            return Remember(new UsageSourceField(_heapOrTable, Size));
         }
 
         public Field<ApiModel> DefineApi()
         {
-            return Remember(new ApiField(_memorySelector, Size));
+            return Remember(new ApiField(_heapOrTable, Size));
         }
 
         public Field<ApiModel?> DefineOptionalApi()
         {
-            return Remember(new OptionalApiField(_memorySelector, Size));
+            return Remember(new OptionalApiField(_heapOrTable, Size));
         }
 
         public Field<ArrayEnumerator<T>> DefineArray<T>(Field<T> field)
             where T: notnull
         {
-            return Remember(new ArrayField<T>(_memorySelector, Size, field));
+            return Remember(new ArrayField<T>(_heapOrTable, Size, field));
         }
 
         public Field<ArrayOfStructuresEnumerator<T>> DefineArray<T>(T layout)
             where T: StructureLayout
         {
-            return Remember(new ArrayOfStructuresField<T>(_memorySelector, Size, layout));
+            return Remember(new ArrayOfStructuresField<T>(_heapOrTable, Size, layout));
         }
     }
 
@@ -140,181 +123,186 @@ internal static partial class ApiCatalogSchema
         public int End => Start + Length;
     }
 
-    public abstract class Field<T>(MemorySelector memorySelector, int start)
+    public abstract class Field<T>(ApiCatalogHeapOrTable heapOrTable, int start)
         : Field(start)
     {
-        protected MemorySelector MemorySelector { get; } = memorySelector;
+        protected ApiCatalogHeapOrTable HeapOrTable { get; } = heapOrTable;
 
-        public T Read(ApiCatalogModel catalog, int rowOffset)
+        public T Read(ApiCatalogModel catalog, int rowIndex)
         {
-            var memory = MemorySelector(catalog);
-            return Read(catalog, memory, rowOffset);
+            ThrowIfNull(catalog);
+            ThrowIfRowIndexOutOfRange(catalog, HeapOrTable, rowIndex);
+
+            catalog.GetMemory(HeapOrTable, out var memory, out var rowSize);
+
+            var offset = rowIndex * rowSize + Start;
+            return Read(catalog, memory, offset);
         }
 
-        protected abstract T Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int rowOffset);
+        protected abstract T Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int offset);
     }
 
-    public sealed class GuidField(MemorySelector memorySelector, int start)
-        : Field<Guid>(memorySelector, start)
+    public sealed class GuidField(ApiCatalogHeapOrTable heapOrTable, int start)
+        : Field<Guid>(heapOrTable, start)
     {
         public override int Length => 16;
 
-        protected override Guid Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int rowOffset)
+        protected override Guid Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int offset)
         {
-            return memory.ReadGuid(rowOffset + Start);
+            return memory.ReadGuid(offset);
         }
     }
 
-    public sealed class SingleField(MemorySelector memorySelector, int start)
-        : Field<float>(memorySelector, start)
+    public sealed class SingleField(ApiCatalogHeapOrTable heapOrTable, int start)
+        : Field<float>(heapOrTable, start)
     {
         public override int Length => 4;
 
-        protected override float Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int rowOffset)
+        protected override float Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int offset)
         {
-            return memory.ReadSingle(rowOffset + Start);
+            return memory.ReadSingle(offset);
         }
     }
 
-    public sealed class Int32Field(MemorySelector memorySelector, int start)
-        : Field<int>(memorySelector, start)
+    public sealed class Int32Field(ApiCatalogHeapOrTable heapOrTable, int start)
+        : Field<int>(heapOrTable, start)
     {
         public override int Length => 4;
 
-        protected override int Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int rowOffset)
+        protected override int Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int offset)
         {
-            return memory.ReadInt32(rowOffset + Start);
+            return memory.ReadInt32(offset);
         }
     }
 
-    public sealed class BooleanField(MemorySelector memorySelector, int start)
-        : Field<bool>(memorySelector, start)
+    public sealed class BooleanField(ApiCatalogHeapOrTable heapOrTable, int start)
+        : Field<bool>(heapOrTable, start)
     {
         public override int Length => 1;
 
-        protected override bool Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int rowOffset)
+        protected override bool Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int offset)
         {
-            return memory.ReadByte(rowOffset + Start) == 1;
+            return memory.ReadByte(offset) == 1;
         }
     }
 
-    public sealed class StringField(MemorySelector memorySelector, int start)
-        : Field<string>(memorySelector, start)
+    public sealed class StringField(ApiCatalogHeapOrTable heapOrTable, int start)
+        : Field<string>(heapOrTable, start)
     {
         public override int Length => 4;
 
-        protected override string Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int rowOffset)
+        protected override string Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int offset)
         {
-            var stringOffset = memory.ReadInt32(rowOffset + Start);
+            var stringOffset = memory.ReadInt32(offset);
             return catalog.GetString(stringOffset);
         }
     }
 
-    public sealed class DateField(MemorySelector memorySelector, int start)
-        : Field<DateOnly>(memorySelector, start)
+    public sealed class DateField(ApiCatalogHeapOrTable heapOrTable, int start)
+        : Field<DateOnly>(heapOrTable, start)
     {
         public override int Length => 4;
 
-        protected override DateOnly Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int rowOffset)
+        protected override DateOnly Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int offset)
         {
-            var dayNumber = memory.ReadInt32(rowOffset + Start);
+            var dayNumber = memory.ReadInt32(offset);
             return DateOnly.FromDayNumber(dayNumber);
         }
     }
 
-    public sealed class ApiKindField(MemorySelector memorySelector, int start)
-        : Field<ApiKind>(memorySelector, start)
+    public sealed class ApiKindField(ApiCatalogHeapOrTable heapOrTable, int start)
+        : Field<ApiKind>(heapOrTable, start)
     {
         public override int Length => 1;
 
-        protected override ApiKind Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int rowOffset)
+        protected override ApiKind Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int offset)
         {
-            var value = memory.ReadByte(rowOffset + Start);
+            var value = memory.ReadByte(offset);
             return (ApiKind)value;
         }
     }
 
-    public sealed class FrameworkField(MemorySelector memorySelector, int start)
-        : Field<FrameworkModel>(memorySelector, start)
+    public sealed class FrameworkField(ApiCatalogHeapOrTable heapOrTable, int start)
+        : Field<FrameworkModel>(heapOrTable, start)
     {
-        public FrameworkField() : this(c => c.BlobHeap, 0)
+        public FrameworkField() : this(ApiCatalogHeapOrTable.BlobHeap, 0)
         {
         }
 
         public override int Length => 4;
 
-        protected override FrameworkModel Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int rowOffset)
+        protected override FrameworkModel Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int offset)
         {
-            var offset = memory.ReadInt32(rowOffset + Start);
-            return new FrameworkModel(catalog, offset);
+            var handle = memory.ReadInt32(offset);
+            return new FrameworkModel(catalog, handle);
         }
     }
 
-    public sealed class PackageField(MemorySelector memorySelector, int start)
-        : Field<PackageModel>(memorySelector, start)
+    public sealed class PackageField(ApiCatalogHeapOrTable heapOrTable, int start)
+        : Field<PackageModel>(heapOrTable, start)
     {
         public override int Length => 4;
 
-        protected override PackageModel Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int rowOffset)
+        protected override PackageModel Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int offset)
         {
-            var offset = memory.ReadInt32(rowOffset + Start);
-            return new PackageModel(catalog, offset);
+            var handle = memory.ReadInt32(offset);
+            return new PackageModel(catalog, handle);
         }
     }
 
-    public sealed class AssemblyField(MemorySelector memorySelector, int start)
-        : Field<AssemblyModel>(memorySelector, start)
+    public sealed class AssemblyField(ApiCatalogHeapOrTable heapOrTable, int start)
+        : Field<AssemblyModel>(heapOrTable, start)
     {
         public AssemblyField()
-            : this(c => c.BlobHeap, 0)
+            : this(ApiCatalogHeapOrTable.BlobHeap, 0)
         {
         }
 
         public override int Length => 4;
 
-        protected override AssemblyModel Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int rowOffset)
+        protected override AssemblyModel Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int offset)
         {
-            var assemblyOffset = memory.ReadInt32(rowOffset + Start);
-            return new AssemblyModel(catalog, assemblyOffset);
+            var handle = memory.ReadInt32(offset);
+            return new AssemblyModel(catalog, handle);
         }
     }
 
-    public sealed class UsageSourceField(MemorySelector memorySelector, int start)
-        : Field<UsageSourceModel>(memorySelector, start)
+    public sealed class UsageSourceField(ApiCatalogHeapOrTable heapOrTable, int start)
+        : Field<UsageSourceModel>(heapOrTable, start)
     {
         public override int Length => 4;
 
-        protected override UsageSourceModel Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int rowOffset)
+        protected override UsageSourceModel Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int offset)
         {
-            var assemblyOffset = memory.ReadInt32(rowOffset + Start);
-            return new UsageSourceModel(catalog, assemblyOffset);
+            var handle = memory.ReadInt32(offset);
+            return new UsageSourceModel(catalog, handle);
         }
     }
 
-    public sealed class ApiField(MemorySelector memorySelector, int start)
-        : Field<ApiModel>(memorySelector, start)
+    public sealed class ApiField(ApiCatalogHeapOrTable heapOrTable, int start)
+        : Field<ApiModel>(heapOrTable, start)
     {
-        public ApiField() : this(c => c.BlobHeap, 0)
+        public ApiField() : this(ApiCatalogHeapOrTable.BlobHeap, 0)
         {
         }
 
         public override int Length => 4;
 
-        protected override ApiModel Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int rowOffset)
+        protected override ApiModel Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int offset)
         {
-            var apiOffset = memory.ReadInt32(rowOffset + Start);
-            return new ApiModel(catalog, apiOffset);
+            var handle = memory.ReadInt32(offset);
+            return new ApiModel(catalog, handle);
         }
     }
 
-    public sealed class OptionalApiField(MemorySelector memorySelector, int start)
-        : Field<ApiModel?>(memorySelector, start)
+    public sealed class OptionalApiField(ApiCatalogHeapOrTable heapOrTable, int start)
+        : Field<ApiModel?>(heapOrTable, start)
     {
         public override int Length => 4;
 
-        protected override ApiModel? Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int rowOffset)
+        protected override ApiModel? Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int offset)
         {
-            var apiOffset = memory.ReadInt32(rowOffset + Start);
+            var apiOffset = memory.ReadInt32(offset);
             if (apiOffset == -1)
                 return null;
 
@@ -322,27 +310,27 @@ internal static partial class ApiCatalogSchema
         }
     }
 
-    public sealed class ArrayField<T>(MemorySelector memorySelector, int start, Field<T> elementDefinition)
-        : Field<ArrayEnumerator<T>>(memorySelector, start)
+    public sealed class ArrayField<T>(ApiCatalogHeapOrTable heapOrTable, int start, Field<T> elementDefinition)
+        : Field<ArrayEnumerator<T>>(heapOrTable, start)
         where T: notnull
     {
         public override int Length => 4;
 
-        protected override ArrayEnumerator<T> Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int rowOffset)
+        protected override ArrayEnumerator<T> Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int offset)
         {
-            return new ArrayEnumerator<T>(catalog, elementDefinition, MemorySelector, rowOffset + Start);
+            return new ArrayEnumerator<T>(catalog, elementDefinition, HeapOrTable, offset);
         }
     }
 
-    public sealed class ArrayOfStructuresField<T>(MemorySelector memorySelector, int start, T layout)
-        : Field<ArrayOfStructuresEnumerator<T>>(memorySelector, start)
+    public sealed class ArrayOfStructuresField<T>(ApiCatalogHeapOrTable heapOrTable, int start, T layout)
+        : Field<ArrayOfStructuresEnumerator<T>>(heapOrTable, start)
         where T: StructureLayout
     {
         public override int Length => 4;
 
-        protected override ArrayOfStructuresEnumerator<T> Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int rowOffset)
+        protected override ArrayOfStructuresEnumerator<T> Read(ApiCatalogModel catalog, ReadOnlySpan<byte> memory, int offset)
         {
-            return new ArrayOfStructuresEnumerator<T>(catalog, layout, MemorySelector, rowOffset + Start);
+            return new ArrayOfStructuresEnumerator<T>(catalog, layout, HeapOrTable, offset);
         }
     }
 
@@ -383,7 +371,7 @@ internal static partial class ApiCatalogSchema
         {
             get
             {
-                return _offset;
+                return _offset / _rowSize;
             }
         }
     }
@@ -398,13 +386,15 @@ internal static partial class ApiCatalogSchema
 
         public ArrayEnumerator(ApiCatalogModel catalog,
                                Field<T> arrayElement,
-                               MemorySelector memorySelector,
+                               ApiCatalogHeapOrTable heapOrTable,
                                int offset)
         {
             _catalog = catalog;
             _arrayElement = arrayElement;
 
-            var blobOffset = memorySelector(catalog).ReadInt32(offset);
+            catalog.GetMemory(heapOrTable, out var memory, out _);
+            
+            var blobOffset = memory.ReadInt32(offset);
             if (blobOffset >= 0)
             {
                 _count = -catalog.BlobHeap.ReadInt32(blobOffset);
@@ -452,13 +442,15 @@ internal static partial class ApiCatalogSchema
 
         public ArrayOfStructuresEnumerator(ApiCatalogModel catalog,
                                            T layout,
-                                           MemorySelector memorySelector,
+                                           ApiCatalogHeapOrTable heapOrTable,
                                            int offset)
         {
             _catalog = catalog;
             _layout = layout;
 
-            var blobOffset = memorySelector(catalog).ReadInt32(offset);
+            catalog.GetMemory(heapOrTable, out var memory, out _);
+            
+            var blobOffset = memory.ReadInt32(offset);
             if (blobOffset >= 0)
             {
                 _count = -catalog.BlobHeap.ReadInt32(blobOffset);

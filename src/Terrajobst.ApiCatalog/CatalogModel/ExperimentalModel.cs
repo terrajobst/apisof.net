@@ -3,19 +3,24 @@ namespace Terrajobst.ApiCatalog;
 public readonly struct ExperimentalModel
 {
     private readonly ApiCatalogModel _catalog;
-    private readonly int _offset;
+    private readonly int _index;
 
-    internal ExperimentalModel(ApiCatalogModel catalog, int offset)
+    internal ExperimentalModel(ApiCatalogModel catalog, int index)
     {
-        ApiCatalogSchema.EnsureValidOffset(catalog.ExperimentalTable, ApiCatalogSchema.ExperimentalRow.Size, offset);
+        ThrowIfNull(catalog);
+        ThrowIfRowIndexOutOfRange(catalog, ApiCatalogHeapOrTable.ExperimentalTable, index);
 
         _catalog = catalog;
-        _offset = offset;
+        _index = index;
     }
 
-    public string DiagnosticId => ApiCatalogSchema.ExperimentalRow.DiagnosticId.Read(_catalog, _offset);
+    public int Id => _index;
 
-    public string UrlFormat => ApiCatalogSchema.ExperimentalRow.UrlFormat.Read(_catalog, _offset);
+    public ApiCatalogModel Catalog => _catalog;
+
+    public string DiagnosticId => ApiCatalogSchema.ExperimentalRow.DiagnosticId.Read(_catalog, _index);
+
+    public string UrlFormat => ApiCatalogSchema.ExperimentalRow.UrlFormat.Read(_catalog, _index);
 
     public string Url
     {
@@ -35,12 +40,12 @@ public readonly struct ExperimentalModel
     public bool Equals(ExperimentalModel other)
     {
         return ReferenceEquals(_catalog, other._catalog) &&
-               _offset == other._offset;
+               _index == other._index;
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(_catalog, _offset);
+        return HashCode.Combine(_catalog, _index);
     }
 
     public static bool operator ==(ExperimentalModel left, ExperimentalModel right)

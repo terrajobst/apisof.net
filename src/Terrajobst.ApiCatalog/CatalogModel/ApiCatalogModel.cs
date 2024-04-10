@@ -87,6 +87,71 @@ public sealed class ApiCatalogModel
 
     public int FormatVersion => _formatVersion;
 
+    internal void GetMemory(ApiCatalogHeapOrTable heapOrTable, out ReadOnlySpan<byte> memory, out int rowSize)
+    {
+        switch (heapOrTable)
+        {
+            case ApiCatalogHeapOrTable.StringHeap:
+                memory = BlobHeap;
+                rowSize = 1;
+                break;
+            case ApiCatalogHeapOrTable.BlobHeap:
+                memory = BlobHeap;
+                rowSize = 1;
+                break;
+            case ApiCatalogHeapOrTable.PlatformTable:
+                memory = PlatformTable;
+                rowSize = ApiCatalogSchema.PlatformRow.Size;
+                break;
+            case ApiCatalogHeapOrTable.FrameworkTable:
+                memory = FrameworkTable;
+                rowSize = ApiCatalogSchema.FrameworkRow.Size;
+                break;
+            case ApiCatalogHeapOrTable.PackageTable:
+                memory = PackageTable;
+                rowSize = ApiCatalogSchema.PackageRow.Size;
+                break;
+            case ApiCatalogHeapOrTable.AssemblyTable:
+                memory = AssemblyTable;
+                rowSize = ApiCatalogSchema.AssemblyRow.Size;
+                break;
+            case ApiCatalogHeapOrTable.UsageSourceTable:
+                memory = UsageSourceTable;
+                rowSize = ApiCatalogSchema.UsageSourceRow.Size;
+                break;
+            case ApiCatalogHeapOrTable.ApiTable:
+                memory = ApiTable;
+                rowSize = ApiCatalogSchema.ApiRow.Size;
+                break;
+            case ApiCatalogHeapOrTable.RootApiTable:
+                memory = RootApiTable;
+                rowSize = ApiCatalogSchema.RootApiRow.Size;
+                break;
+            case ApiCatalogHeapOrTable.ExtensionMethodTable:
+                memory = ExtensionMethodTable;
+                rowSize = ApiCatalogSchema.ExtensionMethodRow.Size;
+                break;
+            case ApiCatalogHeapOrTable.ObsoletionTable:
+                memory = ObsoletionTable;
+                rowSize = ApiCatalogSchema.ObsoletionRow.Size;
+                break;
+            case ApiCatalogHeapOrTable.PlatformSupportTable:
+                memory = PlatformSupportTable;
+                rowSize = ApiCatalogSchema.PlatformSupportRow.Size;
+                break;
+            case ApiCatalogHeapOrTable.PreviewRequirementTable:
+                memory = PreviewRequirementTable;
+                rowSize = ApiCatalogSchema.PreviewRequirementRow.Size;
+                break;
+            case ApiCatalogHeapOrTable.ExperimentalTable:
+                memory = ExperimentalTable;
+                rowSize = ApiCatalogSchema.ExperimentalRow.Size;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(heapOrTable), heapOrTable, null);
+        }
+    }
+
     internal ReadOnlySpan<byte> StringHeap => _stringHeapRange.GetBytes(_buffer);
 
     internal ReadOnlySpan<byte> BlobHeap => _blobHeapRange.GetBytes(_buffer);
@@ -306,7 +371,7 @@ public sealed class ApiCatalogModel
         return new Markup(tokens);
     }
 
-    internal int GetExtensionMethodOffset(int extensionTypeId)
+    internal int GetExtensionMethodIndex(int extensionTypeId)
     {
         var rowSize = ApiCatalogSchema.ExtensionMethodRow.Size;
         Debug.Assert(ExtensionMethodTable.Length % rowSize == 0);
@@ -316,45 +381,42 @@ public sealed class ApiCatalogModel
 
         while (low <= high)
         {
-            var middle = low + ((high - low) >> 1);
-            var rowStart = middle * rowSize;
+            var index = low + ((high - low) >> 1);
 
-            var rowExtensionTypeId = ApiCatalogSchema.ExtensionMethodRow.ExtendedType.Read(this, rowStart);
+            var rowExtensionTypeId = ApiCatalogSchema.ExtensionMethodRow.ExtendedType.Read(this, index);
             var comparison = extensionTypeId.CompareTo(rowExtensionTypeId.Id);
 
             if (comparison == 0)
             {
                 // The table is allowed to contain multiple entries. Just look backwards and adjust the row offset
                 // until we find a row with different values.
-                var previousRowStart = rowStart - rowSize;
-                while (previousRowStart >= 0)
+                while (index - 1 >= 0)
                 {
-                    var previousRowExtensionTypeId = ApiCatalogSchema.ExtensionMethodRow.ExtendedType.Read(this, previousRowStart);
+                    var previousRowExtensionTypeId = ApiCatalogSchema.ExtensionMethodRow.ExtendedType.Read(this, index - 1);
                     if (previousRowExtensionTypeId != rowExtensionTypeId)
                         break;
 
-                    rowStart = previousRowStart;
-                    previousRowStart -= rowSize;
+                    index--;
                 }
 
-                return rowStart;
+                return index;
             }
 
             if (comparison < 0)
-                high = middle - 1;
+                high = index - 1;
             else
-                low = middle + 1;
+                low = index + 1;
         }
 
         return -1;
     }
 
-    private int GetDeclarationTableOffset(ReadOnlySpan<byte> table,
-                                          int rowSize,
-                                          ApiCatalogSchema.Field<ApiModel?> apiField,
-                                          ApiCatalogSchema.Field<AssemblyModel> assemblyField,
-                                          ApiModel? api,
-                                          AssemblyModel assembly)
+    private int GetDeclarationTableIndex(ReadOnlySpan<byte> table,
+                                         int rowSize,
+                                         ApiCatalogSchema.Field<ApiModel?> apiField,
+                                         ApiCatalogSchema.Field<AssemblyModel> assemblyField,
+                                         ApiModel? api,
+                                         AssemblyModel assembly)
     {
         Debug.Assert(table.Length % rowSize == 0);
 
@@ -365,11 +427,11 @@ public sealed class ApiCatalogModel
 
         while (low <= high)
         {
-            var middle = low + ((high - low) >> 1);
-            var rowStart = middle * rowSize;
+            var index = low + ((high - low) >> 1);
+            var rowStart = index * rowSize;
 
-            var rowApi = apiField.Read(this, rowStart);
-            var rowAssembly = assemblyField.Read(this, rowStart);
+            var rowApi = apiField.Read(this, index);
+            var rowAssembly = assemblyField.Read(this, index);
 
             var rowKey = (rowApi?.Id ?? -1, rowAssembly.Id);
             var comparison = lookupKey.CompareTo(rowKey);
@@ -380,28 +442,26 @@ public sealed class ApiCatalogModel
                 // combination. Our binary search may have jumped in the middle of sequence of rows with the same
                 // apiId/assemblyId. Just look backwards and adjust the row offset until we find a row with different
                 // values.
-                var previousRowStart = rowStart - rowSize;
-                while (previousRowStart >= 0)
+                while (index - 1 >= 0)
                 {
-                    var previousRowApi = apiField.Read(this, previousRowStart);
-                    var previousRowAssembly = assemblyField.Read(this, previousRowStart);
+                    var previousRowApi = apiField.Read(this, index - 1);
+                    var previousRowAssembly = assemblyField.Read(this, index - 1);
                     var previousRowKey = (previousRowApi?.Id ?? -1, previousRowAssembly.Id);
 
                     var same = previousRowKey == lookupKey;
                     if (!same)
                         break;
 
-                    rowStart = previousRowStart;
-                    previousRowStart -= rowSize;
+                    index--;
                 }
 
-                return rowStart;
+                return index;
             }
 
             if (comparison < 0)
-                high = middle - 1;
+                high = index - 1;
             else
-                low = middle + 1;
+                low = index + 1;
         }
 
         return -1;
@@ -409,28 +469,28 @@ public sealed class ApiCatalogModel
 
     internal ObsoletionModel? GetObsoletion(ApiModel api, AssemblyModel assembly)
     {
-        var offset = GetDeclarationTableOffset(ObsoletionTable,
-                                               ApiCatalogSchema.ObsoletionRow.Size,
-                                               ApiCatalogSchema.ObsoletionRow.Api,
-                                               ApiCatalogSchema.ObsoletionRow.Assembly,
-                                               api,
-                                               assembly);
+        var index = GetDeclarationTableIndex(ObsoletionTable,
+                                             ApiCatalogSchema.ObsoletionRow.Size,
+                                             ApiCatalogSchema.ObsoletionRow.Api,
+                                             ApiCatalogSchema.ObsoletionRow.Assembly,
+                                             api,
+                                             assembly);
 
-        return offset < 0 ? null : new ObsoletionModel(this, offset);
+        return index < 0 ? null : new ObsoletionModel(this, index);
     }
 
     internal IEnumerable<PlatformSupportModel> GetPlatformSupport(ApiModel? api, AssemblyModel assembly)
     {
-        var offset = GetDeclarationTableOffset(PlatformSupportTable,
-                                               ApiCatalogSchema.PlatformSupportRow.Size,
-                                               ApiCatalogSchema.PlatformSupportRow.Api,
-                                               ApiCatalogSchema.PlatformSupportRow.Assembly,
-                                               api,
-                                               assembly);
-        if (offset < 0)
+        var index = GetDeclarationTableIndex(PlatformSupportTable,
+                                             ApiCatalogSchema.PlatformSupportRow.Size,
+                                             ApiCatalogSchema.PlatformSupportRow.Api,
+                                             ApiCatalogSchema.PlatformSupportRow.Assembly,
+                                             api,
+                                             assembly);
+        if (index < 0)
             yield break;
 
-        var enumerator = ApiCatalogSchema.PlatformSupportRow.Platforms.Read(this, offset);
+        var enumerator = ApiCatalogSchema.PlatformSupportRow.Platforms.Read(this, index);
         while (enumerator.MoveNext())
         {
             var o = enumerator.Current;
@@ -440,26 +500,26 @@ public sealed class ApiCatalogModel
 
     internal PreviewRequirementModel? GetPreviewRequirement(ApiModel? api, AssemblyModel assembly)
     {
-        var offset = GetDeclarationTableOffset(PreviewRequirementTable,
-                                               ApiCatalogSchema.PreviewRequirementRow.Size,
-                                               ApiCatalogSchema.PreviewRequirementRow.Api,
-                                               ApiCatalogSchema.PreviewRequirementRow.Assembly,
-                                               api,
-                                               assembly);
+        var index = GetDeclarationTableIndex(PreviewRequirementTable,
+                                             ApiCatalogSchema.PreviewRequirementRow.Size,
+                                             ApiCatalogSchema.PreviewRequirementRow.Api,
+                                             ApiCatalogSchema.PreviewRequirementRow.Assembly,
+                                             api,
+                                             assembly);
 
-        return offset < 0 ? null : new PreviewRequirementModel(this, offset);
+        return index < 0 ? null : new PreviewRequirementModel(this, index);
     }
 
     internal ExperimentalModel? GetExperimental(ApiModel? api, AssemblyModel assembly)
     {
-        var offset = GetDeclarationTableOffset(ExperimentalTable,
-                                               ApiCatalogSchema.ExperimentalRow.Size,
-                                               ApiCatalogSchema.ExperimentalRow.Api,
-                                               ApiCatalogSchema.ExperimentalRow.Assembly,
-                                               api,
-                                               assembly);
+        var index = GetDeclarationTableIndex(ExperimentalTable,
+                                             ApiCatalogSchema.ExperimentalRow.Size,
+                                             ApiCatalogSchema.ExperimentalRow.Api,
+                                             ApiCatalogSchema.ExperimentalRow.Assembly,
+                                             api,
+                                             assembly);
 
-        return offset < 0 ? null : new ExperimentalModel(this, offset);
+        return index < 0 ? null : new ExperimentalModel(this, index);
     }
 
     public ApiCatalogStatistics GetStatistics()
@@ -563,6 +623,8 @@ public sealed class ApiCatalogModel
 
     public static async Task DownloadFromWebAsync(string fileName)
     {
+        ThrowIfNullOrWhiteSpace(fileName);
+        
         using var client = new HttpClient();
         await using var networkStream = await client.GetStreamAsync(Url);
         await using var fileStream = File.Create(fileName);
@@ -571,12 +633,16 @@ public sealed class ApiCatalogModel
 
     public static async Task<ApiCatalogModel> LoadAsync(string path)
     {
+        ThrowIfNullOrWhiteSpace(path);
+
         await using var stream = File.OpenRead(path);
         return await LoadAsync(stream);
     }
 
     public static async Task<ApiCatalogModel> LoadAsync(Stream stream)
     {
+        ThrowIfNull(stream);
+
         var start = stream.Position;
 
         using var reader = new BinaryReader(stream);

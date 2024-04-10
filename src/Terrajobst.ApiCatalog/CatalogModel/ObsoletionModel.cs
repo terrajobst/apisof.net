@@ -3,23 +3,28 @@ namespace Terrajobst.ApiCatalog;
 public readonly struct ObsoletionModel : IEquatable<ObsoletionModel>
 {
     private readonly ApiCatalogModel _catalog;
-    private readonly int _offset;
+    private readonly int _index;
 
-    internal ObsoletionModel(ApiCatalogModel catalog, int offset)
+    internal ObsoletionModel(ApiCatalogModel catalog, int index)
     {
-        ApiCatalogSchema.EnsureValidOffset(catalog.ObsoletionTable, ApiCatalogSchema.ObsoletionRow.Size, offset);
+        ThrowIfNull(catalog);
+        ThrowIfRowIndexOutOfRange(catalog, ApiCatalogHeapOrTable.ObsoletionTable, index);
 
         _catalog = catalog;
-        _offset = offset;
+        _index = index;
     }
 
-    public string Message => ApiCatalogSchema.ObsoletionRow.Message.Read(_catalog, _offset);
+    public int Id => _index;
 
-    public bool IsError => ApiCatalogSchema.ObsoletionRow.IsError.Read(_catalog, _offset);
+    public ApiCatalogModel Catalog => _catalog;
 
-    public string DiagnosticId => ApiCatalogSchema.ObsoletionRow.DiagnosticId.Read(_catalog, _offset);
+    public string Message => ApiCatalogSchema.ObsoletionRow.Message.Read(_catalog, _index);
 
-    public string UrlFormat => ApiCatalogSchema.ObsoletionRow.UrlFormat.Read(_catalog, _offset);
+    public bool IsError => ApiCatalogSchema.ObsoletionRow.IsError.Read(_catalog, _index);
+
+    public string DiagnosticId => ApiCatalogSchema.ObsoletionRow.DiagnosticId.Read(_catalog, _index);
+
+    public string UrlFormat => ApiCatalogSchema.ObsoletionRow.UrlFormat.Read(_catalog, _index);
 
     public string Url
     {
@@ -39,12 +44,12 @@ public readonly struct ObsoletionModel : IEquatable<ObsoletionModel>
     public bool Equals(ObsoletionModel other)
     {
         return ReferenceEquals(_catalog, other._catalog) &&
-               _offset == other._offset;
+               _index == other._index;
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(_catalog, _offset);
+        return HashCode.Combine(_catalog, _index);
     }
 
     public static bool operator ==(ObsoletionModel left, ObsoletionModel right)

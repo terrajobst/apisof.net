@@ -1,6 +1,6 @@
-﻿using System.Buffers.Binary;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO.Compression;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Terrajobst.ApiCatalog;
@@ -26,14 +26,17 @@ public sealed partial class CatalogBuilder
         private readonly PreviewRequirementTable _previewRequirementTable = new();
         private readonly ExperimentalTable _experimentalTable = new();
 
-        private readonly Dictionary<IntermediateFramework, FrameworkOffset> _frameworkOffsets = new();
-        private readonly Dictionary<IntermediatePackage, PackageOffset> _packageOffsets = new();
-        private readonly Dictionary<IntermediaAssembly, AssemblyOffset> _assemblyOffsets = new();
-        private readonly Dictionary<IntermediateUsageSource, UsageSourceOffset> _usageSourceOffsets = new();
-        private readonly Dictionary<IntermediaApi, ApiOffset> _apiOffsets = new();
+        private readonly Dictionary<IntermediateFramework, FrameworkHandle> _frameworkHandles = new();
+        private readonly Dictionary<IntermediatePackage, PackageHandle> _packageHandles = new();
+        private readonly Dictionary<IntermediaAssembly, AssemblyHandle> _assemblyHandles = new();
+        private readonly Dictionary<IntermediateUsageSource, UsageSourceHandle> _usageSourceHandles = new();
+        private readonly Dictionary<string, BlobHandle> _syntaxHandles = new();
+        private readonly Dictionary<IntermediaApi, ApiHandle> _apiHandles = new();
 
         public CatalogWriter(CatalogBuilder builder)
         {
+            ThrowIfNull(builder);
+            
             _builder = builder;
         }
 
@@ -56,11 +59,18 @@ public sealed partial class CatalogBuilder
                 _experimentalTable
             };
 
+            EnterFrameworkHandles();
+            EnterPackageHandles();
+            EnterAssemblyHandles();
+            EnterUsageSourceHandles();
+            EnterApiHandles();
+            
             WritePlatforms();
             WriteFrameworks();
             WritePackages();
             WriteAssemblies();
             WriteUsageSources();
+            WriteSyntax();
             WriteApis();
             WriteRootApis();
             WriteExtensionMethods();
@@ -68,10 +78,6 @@ public sealed partial class CatalogBuilder
             WritePlatformSupports();
             WritePreviewRequirements();
             WriteExperimentals();
-
-            _blobHeap.PatchSyntaxes(_stringHeap, _builder._apiByFingerprint);
-            _blobHeap.PatchApiOffsets(_builder._apis, _apiOffsets);
-            _blobHeap.PatchAssemblyOffsets(_builder._assemblies, _assemblyOffsets);
 
             using (var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))
             {
@@ -100,6 +106,67 @@ public sealed partial class CatalogBuilder
             }
         }
 
+        private void EnterFrameworkHandles()
+        {
+            foreach (var framework in _builder._frameworkByName.Values)
+            {
+                var handle = new FrameworkHandle(_frameworkHandles.Count);
+                _frameworkHandles.Add(framework, handle);
+            }
+        }
+
+        private void EnterPackageHandles()
+        {
+            foreach (var package in _builder._packageByFingerprint.Values)
+            {
+                var handle = new PackageHandle(_packageHandles.Count);
+                _packageHandles.Add(package, handle);
+            }
+        }
+
+        private void EnterAssemblyHandles()
+        {
+            foreach (var assembly in _builder._assemblies)
+            {
+                var handle = new AssemblyHandle(_assemblyHandles.Count);
+                _assemblyHandles.Add(assembly, handle);
+            }
+        }
+
+        private void EnterUsageSourceHandles()
+        {
+            foreach (var usageSource in _builder._usageSources.Values)
+            {
+                var handle = new UsageSourceHandle(_usageSourceHandles.Count);
+                _usageSourceHandles.Add(usageSource, handle);
+            }
+        }
+
+        private void EnterApiHandles()
+        {
+            EnterHandles(_apiHandles, _builder._rootApis);
+
+            static void EnterHandles(Dictionary<IntermediaApi, ApiHandle> handles, IEnumerable<IntermediaApi> apis)
+            {
+                foreach (var api in apis)
+                {
+                    var handle = new ApiHandle(handles.Count);
+                    handles.Add(api, handle);
+                    
+                    if (api.Children is not null)
+                        EnterHandles(handles, api.Children);
+                }
+            }
+        }
+
+        private static void EnsureEnteredHandleMatches<TValue, THandleTag>(Dictionary<TValue, Handle<THandleTag>> handles, TValue value, Handle<THandleTag> actualHandle)
+            where TValue : notnull
+        {
+            var expectedHandle = handles[value];
+            if (expectedHandle != actualHandle)
+                throw new Exception($"The entered handle {expectedHandle} doesn't match the actual handle {actualHandle}");
+        }
+
         private void WritePlatforms()
         {
             Console.WriteLine("Writing platforms...");
@@ -122,10 +189,10 @@ public sealed partial class CatalogBuilder
             foreach (var framework in frameworks)
             {
                 var name = _stringHeap.Store(framework.Name);
-                var assemblies = _blobHeap.StoreAssemblies(framework.Assemblies);
+                var assemblies = _blobHeap.StoreAssemblies(framework.Assemblies, _assemblyHandles);
 
-                var offset = _frameworkTable.WriteRow(name, assemblies);
-                _frameworkOffsets.Add(framework, offset);
+                var handle = _frameworkTable.WriteRow(name, assemblies);
+                EnsureEnteredHandleMatches(_frameworkHandles, framework, handle); 
             }
         }
 
@@ -139,10 +206,10 @@ public sealed partial class CatalogBuilder
             {
                 var name = _stringHeap.Store(package.Name);
                 var version = _stringHeap.Store(package.Version);
-                var assemblies = _blobHeap.StoreAssemblies(package.Assemblies, _frameworkOffsets);
+                var assemblies = _blobHeap.StoreAssemblies(package.Assemblies, _frameworkHandles, _assemblyHandles);
 
-                var rowOffset = _packageTable.WriteRow(name, version, assemblies);
-                _packageOffsets.Add(package, rowOffset);
+                var handle = _packageTable.WriteRow(name, version, assemblies);
+                EnsureEnteredHandleMatches(_packageHandles, package, handle); 
             }
         }
 
@@ -158,12 +225,12 @@ public sealed partial class CatalogBuilder
                 var name = _stringHeap.Store(assembly.Name);
                 var publicKeyToken = _stringHeap.Store(assembly.PublicKeyToken);
                 var version = _stringHeap.Store(assembly.Version);
-                var rootApis = _blobHeap.StoreApis(assembly.RootApis.ToArray());
-                var frameworks = _blobHeap.StoreFrameworks(assembly.Frameworks, _frameworkOffsets);
-                var packages = _blobHeap.StorePackages(assembly.Packages, _packageOffsets, _frameworkOffsets);
+                var rootApis = _blobHeap.StoreApis(assembly.RootApis.ToArray(), _apiHandles);
+                var frameworks = _blobHeap.StoreFrameworks(assembly.Frameworks, _frameworkHandles);
+                var packages = _blobHeap.StorePackages(assembly.Packages, _packageHandles, _frameworkHandles);
 
-                var rowOffset = _assemblyTable.WriteRow(fingerprint, name, publicKeyToken, version, rootApis, frameworks, packages);
-                _assemblyOffsets.Add(assembly, rowOffset);
+                var handle = _assemblyTable.WriteRow(fingerprint, name, publicKeyToken, version, rootApis, frameworks, packages);
+                EnsureEnteredHandleMatches(_assemblyHandles, assembly, handle);
             }
         }
 
@@ -178,11 +245,26 @@ public sealed partial class CatalogBuilder
                 var name = _stringHeap.Store(usageSource.Name);
                 var dayNumber = usageSource.Date.DayNumber;
 
-                var rowOffset = _usageSourceTable.WriteRow(name, dayNumber);
-                _usageSourceOffsets.Add(usageSource, rowOffset);
+                var handle = _usageSourceTable.WriteRow(name, dayNumber);
+                EnsureEnteredHandleMatches(_usageSourceHandles, usageSource, handle);
             }
         }
 
+        private void WriteSyntax()
+        {
+            Console.WriteLine("Writing syntax...");
+
+            foreach (var assembly in _builder._assemblies)
+            {
+                foreach (var declaration in assembly.Declarations.Values)
+                {
+                    ref var handle = ref CollectionsMarshal.GetValueRefOrAddDefault(_syntaxHandles, declaration.Syntax, out var exists);
+                    if (!exists)
+                        handle = _blobHeap.StoreSyntax(declaration.Syntax, _stringHeap, _builder._apiByFingerprint, _apiHandles);
+                }
+            }
+        }
+        
         private void WriteApis()
         {
             Console.WriteLine("Writing APIs...");
@@ -200,14 +282,14 @@ public sealed partial class CatalogBuilder
 
                 var fingerprint = api.Fingerprint;
                 var kind = (byte)api.Kind;
-                var parent = api.Parent is null ? ApiOffset.Nil : _apiOffsets[api.Parent]; // NOTE: This is safe because we know the parent was already written.
+                var parent = api.Parent is null ? ApiHandle.Nil : _apiHandles[api.Parent]; // NOTE: This is safe because we know the parent was already written.
                 var name = _stringHeap.Store(api.Name);
-                var children = _blobHeap.StoreApis(intermediateChildren);
-                var declarations = _blobHeap.StoreDeclarations(intermediateDeclarations, _assemblyOffsets);
-                var usages = _blobHeap.StoreUsages(intermediateUsages, _usageSourceOffsets);
+                var children = _blobHeap.StoreApis(intermediateChildren, _apiHandles);
+                var declarations = _blobHeap.StoreDeclarations(intermediateDeclarations, _assemblyHandles, _syntaxHandles);
+                var usages = _blobHeap.StoreUsages(intermediateUsages, _usageSourceHandles);
 
-                var rowOffset = _apiTable.WriteRow(fingerprint, kind, parent, name, children, declarations, usages);
-                _apiOffsets.Add(api, rowOffset);
+                var handle = _apiTable.WriteRow(fingerprint, kind, parent, name, children, declarations, usages);
+                EnsureEnteredHandleMatches(_apiHandles, api, handle);
 
                 if (api.Children is not null)
                     WriteApis(api.Children);
@@ -246,7 +328,7 @@ public sealed partial class CatalogBuilder
 
             foreach (var entry in _builder._rootApis)
             {
-                var api = _apiOffsets[entry];
+                var api = _apiHandles[entry];
                 _rootApiTable.WriteRow(api);
             }
         }
@@ -259,8 +341,8 @@ public sealed partial class CatalogBuilder
                 .Where(a => a.Extensions is not null)
                 .SelectMany(type => type.Extensions!, (type, extension) => (
                     ExtensionMethodGuid: extension.Fingerprint,
-                    ExtendedType: _apiOffsets[type],
-                    ExtensionMethod: _apiOffsets[extension.Method]))
+                    ExtendedType: _apiHandles[type],
+                    ExtensionMethod: _apiHandles[extension.Method]))
                 .OrderBy(t => t.ExtendedType.Value)
                 .ThenBy(t => t.ExtensionMethod.Value)
                 .ToArray();
@@ -282,8 +364,8 @@ public sealed partial class CatalogBuilder
                 .SelectMany(a => a.Declarations.Values)
                 .Where(d => d.Obsoletion is not null)
                 .Select(d => (
-                    Api: _apiOffsets[d.Api],
-                    Assembly: _assemblyOffsets[d.Assembly],
+                    Api: _apiHandles[d.Api],
+                    Assembly: _assemblyHandles[d.Assembly],
                     Message: _stringHeap.Store(d.Obsoletion!.Message),
                     d.Obsoletion.IsError,
                     DiagnosticId: _stringHeap.Store(d.Obsoletion.DiagnosticId),
@@ -320,8 +402,8 @@ public sealed partial class CatalogBuilder
                 .Concat(apiPlatformSupport)
                 .Where(e => e.PlatformSupport is not null)
                 .Select(e => (
-                    Api: e.Api is null ? ApiOffset.Nil : _apiOffsets[e.Api],
-                    Assembly: _assemblyOffsets[e.Assembly],
+                    Api: e.Api is null ? ApiHandle.Nil : _apiHandles[e.Api],
+                    Assembly: _assemblyHandles[e.Assembly],
                     Platforms: _blobHeap.StorePlatformSupport(e.PlatformSupport!, _stringHeap)
                 ))
                 .OrderBy(t => t.Api.Value)
@@ -351,8 +433,8 @@ public sealed partial class CatalogBuilder
                 .Concat(apiPreviewRequirements)
                 .Where(e => e.PreviewRequirement is not null)
                 .Select(e => (
-                    Api: e.Api is null ? ApiOffset.Nil : _apiOffsets[e.Api],
-                    Assembly: _assemblyOffsets[e.Assembly],
+                    Api: e.Api is null ? ApiHandle.Nil : _apiHandles[e.Api],
+                    Assembly: _assemblyHandles[e.Assembly],
                     Message: _stringHeap.Store(e.PreviewRequirement!.Message),
                     Url: _stringHeap.Store(e.PreviewRequirement.Url)
                 ))
@@ -385,8 +467,8 @@ public sealed partial class CatalogBuilder
                 .Concat(apiExperimental)
                 .Where(e => e.Experimental is not null)
                 .Select(e => (
-                    Api: e.Api is null ? ApiOffset.Nil : _apiOffsets[e.Api],
-                    Assembly: _assemblyOffsets[e.Assembly],
+                    Api: e.Api is null ? ApiHandle.Nil : _apiHandles[e.Api],
+                    Assembly: _assemblyHandles[e.Assembly],
                     DiagnosticId: _stringHeap.Store(e.Experimental!.DiagnosticId),
                     UrlFormat: _stringHeap.Store(e.Experimental.UrlFormat)
                 ))
@@ -422,27 +504,10 @@ public sealed partial class CatalogBuilder
                 Debug.Assert(_data.Position == 0);
             }
 
-            public void Seek(int offset)
-            {
-                _writer.Flush();
-                _data.Position = offset;
-            }
-
             public int GetLength()
             {
                 _writer.Flush();
                 return (int)_data.Length;
-            }
-
-            public int PeekInt32()
-            {
-                _writer.Flush();
-
-                var location = _data.Position;
-                var span = (Span<byte>) stackalloc byte[4];
-                _data.ReadExactly(span);
-                _data.Position = location;
-                return BinaryPrimitives.ReadInt32LittleEndian(span);
             }
 
             public ArraySegment<byte> GetData()
@@ -460,39 +525,39 @@ public sealed partial class CatalogBuilder
                 _data.CopyTo(destination);
             }
 
-            public void WriteStringOffset(StringOffset offset)
+            public void WriteStringHandle(StringHandle handle)
             {
-                WriteInt32(offset.Value);
+                WriteInt32(handle.Value);
             }
 
-            public void WriteBlobOffset(BlobOffset offset)
+            public void WriteBlobHandle(BlobHandle handle)
             {
-                WriteInt32(offset.Value);
+                WriteInt32(handle.Value);
             }
 
-            public void WriteFrameworkOffset(FrameworkOffset offset)
+            public void WriteFrameworkHandle(FrameworkHandle handle)
             {
-                WriteInt32(offset.Value);
+                WriteInt32(handle.Value);
             }
 
-            public void WritePackageOffset(PackageOffset offset)
+            public void WritePackageHandle(PackageHandle handle)
             {
-                WriteInt32(offset.Value);
+                WriteInt32(handle.Value);
             }
 
-            public void WriteAssemblyOffset(AssemblyOffset offset)
+            public void WriteAssemblyHandle(AssemblyHandle handle)
             {
-                WriteInt32(offset.Value);
+                WriteInt32(handle.Value);
             }
 
-            public void WriteUsageSourceOffset(UsageSourceOffset offset)
+            public void WriteUsageSourceHandle(UsageSourceHandle handle)
             {
-                WriteInt32(offset.Value);
+                WriteInt32(handle.Value);
             }
 
-            public void WriteApiOffset(ApiOffset offset)
+            public void WriteApiHandle(ApiHandle handle)
             {
-                WriteInt32(offset.Value);
+                WriteInt32(handle.Value);
             }
 
             public void WriteString(string value)
@@ -556,7 +621,7 @@ public sealed partial class CatalogBuilder
                 _underlyingMemory = underlyingMemory;
             }
 
-            public BlobOffset Commit()
+            public BlobHandle Commit()
             {
                 var data = GetData();
                 var offset = _underlyingMemory.GetLength();
@@ -566,7 +631,7 @@ public sealed partial class CatalogBuilder
                     _underlyingMemory.WriteBytes(data);
 
                 Clear();
-                return new BlobOffset(offset);
+                return new BlobHandle(offset);
             }
 
             // This algorithm is taken from System.Reflection.Metadata.
@@ -625,10 +690,6 @@ public sealed partial class CatalogBuilder
 
         private sealed class BlobHeap : HeapOrTable
         {
-            private readonly List<BlobOffset> _assemblyPatchups = new();
-            private readonly List<BlobOffset> _apiPatchups = new();
-            private readonly List<(BlobOffset, IntermediateDeclaration)> _syntaxPatchups = new();
-
             public BlobHeap()
             {
                 DeduplicatedMemory = new DeduplicatedMemory(Memory);
@@ -636,175 +697,166 @@ public sealed partial class CatalogBuilder
 
             private DeduplicatedMemory DeduplicatedMemory { get; }
 
-            private void WriteAssemblyPatchup(IntermediaAssembly assembly)
-            {
-                var offset = SeekEnd();
-                _assemblyPatchups.Add(offset);
-                Memory.WriteInt32(assembly.Index);
-            }
-
-            private void WriteApiPatchup(IntermediaApi api)
-            {
-                var offset = SeekEnd();
-                _apiPatchups.Add(offset);
-                Memory.WriteInt32(api.Index);
-            }
-
-            private void WriteSyntaxPatchup(IntermediateDeclaration declaration)
-            {
-                var offset = SeekEnd();
-                _syntaxPatchups.Add((offset, declaration));
-                Memory.WriteInt32(-1);
-            }
-
-            private BlobOffset SeekEnd()
+            private BlobHandle GetEnd()
             {
                 var end = Memory.GetLength();
-                Memory.Seek(end);
-                return new BlobOffset(end);
+                return new BlobHandle(end);
             }
 
-            public BlobOffset StoreAssemblies(IReadOnlyList<IntermediaAssembly> assemblies)
+            public BlobHandle StoreAssemblies(IReadOnlyList<IntermediaAssembly> assemblies,
+                                              IReadOnlyDictionary<IntermediaAssembly, AssemblyHandle> assemblyHandles)
             {
                 if (assemblies.Count == 0)
-                    return BlobOffset.Nil;
+                    return BlobHandle.Nil;
 
-                var result = SeekEnd();
+                var result = GetEnd();
 
                 Memory.WriteInt32(assemblies.Count);
                 foreach (var assembly in assemblies)
-                    WriteAssemblyPatchup(assembly);
+                {
+                    var handle = assemblyHandles[assembly];
+                    Memory.WriteAssemblyHandle(handle);
+                }
 
                 return result;
             }
 
-            public BlobOffset StoreAssemblies(IReadOnlyList<(IntermediateFramework, IntermediaAssembly)> assemblies,
-                                              IReadOnlyDictionary<IntermediateFramework, FrameworkOffset> frameworkOffsets)
+            public BlobHandle StoreAssemblies(IReadOnlyList<(IntermediateFramework, IntermediaAssembly)> assemblies,
+                                              IReadOnlyDictionary<IntermediateFramework, FrameworkHandle> frameworkHandles,
+                                              IReadOnlyDictionary<IntermediaAssembly, AssemblyHandle> assemblyHandles)
             {
                 if (assemblies.Count == 0)
-                    return BlobOffset.Nil;
+                    return BlobHandle.Nil;
 
-                var result = SeekEnd();
+                var result = GetEnd();
 
                 Memory.WriteInt32(assemblies.Count);
                 foreach (var (framework, assembly) in assemblies)
                 {
-                    Memory.WriteFrameworkOffset(frameworkOffsets[framework]);
-                    WriteAssemblyPatchup(assembly);
+                    Memory.WriteFrameworkHandle(frameworkHandles[framework]);
+                    Memory.WriteAssemblyHandle(assemblyHandles[assembly]);
                 }
 
                 return result;
             }
 
-            public BlobOffset StoreFrameworks(IReadOnlyList<IntermediateFramework> frameworks,
-                                              IReadOnlyDictionary<IntermediateFramework, FrameworkOffset> frameworkOffsets)
+            public BlobHandle StoreFrameworks(IReadOnlyList<IntermediateFramework> frameworks,
+                                              IReadOnlyDictionary<IntermediateFramework, FrameworkHandle> frameworkHandles)
             {
                 if (frameworks.Count == 0)
-                    return BlobOffset.Nil;
+                    return BlobHandle.Nil;
 
-                var result = SeekEnd();
+                var result = GetEnd();
 
                 Memory.WriteInt32(frameworks.Count);
                 foreach (var framework in frameworks)
-                    Memory.WriteFrameworkOffset(frameworkOffsets[framework]);
+                    Memory.WriteFrameworkHandle(frameworkHandles[framework]);
 
                 return result;
             }
 
-            public BlobOffset StorePackages(IReadOnlyList<(IntermediatePackage, IntermediateFramework)> packages,
-                                            IReadOnlyDictionary<IntermediatePackage, PackageOffset> packageOffsets,
-                                            IReadOnlyDictionary<IntermediateFramework, FrameworkOffset> frameworkOffsets)
+            public BlobHandle StorePackages(IReadOnlyList<(IntermediatePackage, IntermediateFramework)> packages,
+                                            IReadOnlyDictionary<IntermediatePackage, PackageHandle> packageHandles,
+                                            IReadOnlyDictionary<IntermediateFramework, FrameworkHandle> frameworkHandles)
             {
                 if (packages.Count == 0)
-                    return BlobOffset.Nil;
+                    return BlobHandle.Nil;
 
-                var result = SeekEnd();
+                var result = GetEnd();
 
                 Memory.WriteInt32(packages.Count);
                 foreach (var (package, framework) in packages)
                 {
-                    Memory.WritePackageOffset(packageOffsets[package]);
-                    Memory.WriteFrameworkOffset(frameworkOffsets[framework]);
+                    Memory.WritePackageHandle(packageHandles[package]);
+                    Memory.WriteFrameworkHandle(frameworkHandles[framework]);
                 }
 
                 return result;
             }
 
-            public BlobOffset StoreApis(IReadOnlyList<IntermediaApi> apis)
+            public BlobHandle StoreApis(IReadOnlyList<IntermediaApi> apis,
+                                        IReadOnlyDictionary<IntermediaApi, ApiHandle> apiHandles)
             {
                 if (apis.Count == 0)
-                    return BlobOffset.Nil;
+                    return BlobHandle.Nil;
 
-                var result = SeekEnd();
+                var result = GetEnd();
 
                 Memory.WriteInt32(apis.Count);
                 foreach (var api in apis)
-                    WriteApiPatchup(api);
+                {
+                    var handle = apiHandles[api];
+                    Memory.WriteApiHandle(handle);
+                }
 
                 return result;
             }
 
-            public BlobOffset StoreDeclarations(IReadOnlyList<IntermediateDeclaration> declarations,
-                                                IReadOnlyDictionary<IntermediaAssembly, AssemblyOffset> assemblyOffsets)
+            public BlobHandle StoreDeclarations(IReadOnlyList<IntermediateDeclaration> declarations,
+                                                IReadOnlyDictionary<IntermediaAssembly, AssemblyHandle> assemblyHandles,
+                                                IReadOnlyDictionary<string, BlobHandle> syntaxHandles)
             {
                 if (declarations.Count == 0)
-                    return BlobOffset.Nil;
+                    return BlobHandle.Nil;
 
-                var result = SeekEnd();
+                var result = GetEnd();
 
                 Memory.WriteInt32(declarations.Count);
                 foreach (var declaration in declarations)
                 {
-                    Memory.WriteAssemblyOffset(assemblyOffsets[declaration.Assembly]);
-                    WriteSyntaxPatchup(declaration);
+                    var assemblyHandle = assemblyHandles[declaration.Assembly];
+                    var syntaxHandle = syntaxHandles[declaration.Syntax];
+                    Memory.WriteAssemblyHandle(assemblyHandle);
+                    Memory.WriteBlobHandle(syntaxHandle);
                 }
 
                 return result;
             }
 
-            public BlobOffset StoreUsages(IReadOnlyList<(IntermediateUsageSource UsageSource, float Percentage)> usages,
-                                          IReadOnlyDictionary<IntermediateUsageSource, UsageSourceOffset> usageSourceOffsets)
+            public BlobHandle StoreUsages(IReadOnlyList<(IntermediateUsageSource UsageSource, float Percentage)> usages,
+                                          IReadOnlyDictionary<IntermediateUsageSource, UsageSourceHandle> usageSourceHandles)
             {
                 if (usages.Count == 0)
-                    return BlobOffset.Nil;
+                    return BlobHandle.Nil;
 
-                var result = SeekEnd();
+                var result = GetEnd();
 
                 Memory.WriteInt32(usages.Count);
                 foreach (var usage in usages)
                 {
-                    Memory.WriteUsageSourceOffset(usageSourceOffsets[usage.UsageSource]);
+                    Memory.WriteUsageSourceHandle(usageSourceHandles[usage.UsageSource]);
                     Memory.WriteSingle(usage.Percentage);
                 }
 
                 return result;
             }
 
-            public BlobOffset StorePlatformSupport(IReadOnlyList<IntermediatePlatformSupport> platforms,
+            public BlobHandle StorePlatformSupport(IReadOnlyList<IntermediatePlatformSupport> platforms,
                                                    StringHeap stringHeap)
             {
                 if (platforms.Count == 0)
-                    return BlobOffset.Nil;
+                    return BlobHandle.Nil;
 
                 DeduplicatedMemory.WriteInt32(platforms.Count);
                 foreach (var platformSupport in platforms
                              .OrderBy(p => p.PlatformName, StringComparer.OrdinalIgnoreCase)
                              .ThenBy(p => p.IsSupported))
                 {
-                    DeduplicatedMemory.WriteStringOffset(stringHeap.Store(platformSupport.PlatformName));
+                    DeduplicatedMemory.WriteStringHandle(stringHeap.Store(platformSupport.PlatformName));
                     DeduplicatedMemory.WriteBool(platformSupport.IsSupported);
                 }
 
                 return DeduplicatedMemory.Commit();
             }
-            
-            private BlobOffset StoreSyntax(string syntax,
-                                           StringHeap stringHeap,
-                                           IReadOnlyDictionary<Guid, IntermediaApi> apiByFingerprint)
+
+            public BlobHandle StoreSyntax(string syntax,
+                                          StringHeap stringHeap,
+                                          IReadOnlyDictionary<Guid, IntermediaApi> apiByFingerprint,
+                                          IReadOnlyDictionary<IntermediaApi, ApiHandle> apiHandles)
             {
                 var markup = Markup.FromXml(syntax);
 
-                var result = SeekEnd();
+                var result = GetEnd();
                 Memory.WriteInt32(markup.Tokens.Length);
 
                 foreach (var token in markup.Tokens)
@@ -815,12 +867,12 @@ public sealed partial class CatalogBuilder
 
                     Memory.WriteByte(kind);
                     if (!hasIntrinsicText)
-                        Memory.WriteStringOffset(text);
+                        Memory.WriteStringHandle(text);
 
                     if (token.Kind == MarkupTokenKind.ReferenceToken)
                     {
                         if (token.Reference is not null && apiByFingerprint.TryGetValue(token.Reference.Value, out var api))
-                            WriteApiPatchup(api);
+                            Memory.WriteApiHandle(apiHandles[api]);
                         else
                             Memory.WriteInt32(-1);
                     }
@@ -828,256 +880,200 @@ public sealed partial class CatalogBuilder
 
                 return result;
             }
-
-            public void PatchSyntaxes(StringHeap stringHeap,
-                                      IReadOnlyDictionary<Guid, IntermediaApi> apiByFingerprint)
-            {
-                Console.WriteLine("Patching syntaxes...");
-
-                var syntaxOffsets = new Dictionary<string, BlobOffset>(StringComparer.Ordinal);
-
-                foreach (var (patchOffset, declaration) in _syntaxPatchups)
-                {
-                    if (!syntaxOffsets.TryGetValue(declaration.Syntax, out var syntaxOffset))
-                    {
-                        syntaxOffset = StoreSyntax(declaration.Syntax, stringHeap, apiByFingerprint);
-                        syntaxOffsets.Add(declaration.Syntax, syntaxOffset);
-                    }
-
-                    Memory.Seek(patchOffset.Value);
-                    Memory.WriteInt32(syntaxOffset.Value);
-                }
-
-                Memory.Seek(Memory.GetLength());
-            }
-
-            public void PatchApiOffsets(IReadOnlyList<IntermediaApi> apis,
-                                        IReadOnlyDictionary<IntermediaApi, ApiOffset> apiOffsets)
-            {
-                Console.WriteLine("Patching API offsets...");
-
-                foreach (var patchOffset in _apiPatchups)
-                {
-                    Memory.Seek(patchOffset.Value);
-                    var apiIndex = Memory.PeekInt32();
-                    var api = apis[apiIndex];
-                    var apiOffset = apiOffsets[api];
-                    Memory.WriteApiOffset(apiOffset);
-                }
-
-                Memory.Seek(Memory.GetLength());
-            }
-
-            public void PatchAssemblyOffsets(IReadOnlyList<IntermediaAssembly> assemblies,
-                                             IReadOnlyDictionary<IntermediaAssembly, AssemblyOffset> assemblyOffsets)
-            {
-                Console.WriteLine("Patching assembly offsets...");
-
-                foreach (var patchOffset in _assemblyPatchups)
-                {
-                    Memory.Seek(patchOffset.Value);
-                    var assemblyIndex = Memory.PeekInt32();
-                    var assembly = assemblies[assemblyIndex];
-                    var assemblyOffset = assemblyOffsets[assembly];
-                    Memory.WriteAssemblyOffset(assemblyOffset);
-                }
-
-                Memory.Seek(Memory.GetLength());
-            }
         }
 
         private sealed class StringHeap : HeapOrTable
         {
-            private readonly Dictionary<string, StringOffset> _stringOffsets = new (StringComparer.Ordinal);
+            private readonly Dictionary<string, StringHandle> _stringHandles = new (StringComparer.Ordinal);
 
-            public StringOffset Store(string text)
+            public StringHandle Store(string text)
             {
-                if (!_stringOffsets.TryGetValue(text, out var offset))
+                if (!_stringHandles.TryGetValue(text, out var handle))
                 {
-                    offset = new StringOffset(Memory.GetLength());
+                    handle = new StringHandle(Memory.GetLength());
                     Memory.WriteString(text);
-                    _stringOffsets.Add(text, offset);
+                    _stringHandles.Add(text, handle);
                 }
 
-                return offset;
+                return handle;
             }
         }
 
         private sealed class PlatformTable : HeapOrTable
         {
-            public void WriteRow(StringOffset name)
+            public void WriteRow(StringHandle name)
             {
-                Memory.WriteStringOffset(name);
+                Memory.WriteStringHandle(name);
             }
         }
 
         private sealed class FrameworkTable : HeapOrTable
         {
-            public FrameworkOffset WriteRow(StringOffset name,
-                                            BlobOffset assemblies)
+            public FrameworkHandle WriteRow(StringHandle name,
+                                            BlobHandle assemblies)
             {
-                var offset = new FrameworkOffset(Memory.GetLength());
+                var handle = new FrameworkHandle(Memory.GetLength() / ApiCatalogSchema.FrameworkRow.Size);
 
-                Memory.WriteStringOffset(name);
-                Memory.WriteBlobOffset(assemblies);
+                Memory.WriteStringHandle(name);
+                Memory.WriteBlobHandle(assemblies);
 
-                return offset;
+                return handle;
             }
         }
 
         private sealed class PackageTable : HeapOrTable
         {
-            public PackageOffset WriteRow(StringOffset packageName,
-                                          StringOffset packageVersion,
-                                          BlobOffset assemblies)
+            public PackageHandle WriteRow(StringHandle packageName,
+                                          StringHandle packageVersion,
+                                          BlobHandle assemblies)
             {
-                var offset = new PackageOffset(Memory.GetLength());
+                var handle = new PackageHandle(Memory.GetLength() / ApiCatalogSchema.PackageRow.Size);
 
-                Memory.WriteStringOffset(packageName);
-                Memory.WriteStringOffset(packageVersion);
-                Memory.WriteBlobOffset(assemblies);
+                Memory.WriteStringHandle(packageName);
+                Memory.WriteStringHandle(packageVersion);
+                Memory.WriteBlobHandle(assemblies);
 
-                return offset;
+                return handle;
             }
         }
 
         private sealed class AssemblyTable : HeapOrTable
         {
-            public AssemblyOffset WriteRow(Guid fingerprint,
-                                           StringOffset name,
-                                           StringOffset publicKeyToken,
-                                           StringOffset version,
-                                           BlobOffset rootApis,
-                                           BlobOffset frameworks,
-                                           BlobOffset packages)
+            public AssemblyHandle WriteRow(Guid fingerprint,
+                                           StringHandle name,
+                                           StringHandle publicKeyToken,
+                                           StringHandle version,
+                                           BlobHandle rootApis,
+                                           BlobHandle frameworks,
+                                           BlobHandle packages)
             {
-                var offset = new AssemblyOffset(Memory.GetLength());
+                var handle = new AssemblyHandle(Memory.GetLength() / ApiCatalogSchema.AssemblyRow.Size);
 
                 Memory.WriteGuid(fingerprint);
-                Memory.WriteStringOffset(name);
-                Memory.WriteStringOffset(publicKeyToken);
-                Memory.WriteStringOffset(version);
-                Memory.WriteBlobOffset(rootApis);
-                Memory.WriteBlobOffset(frameworks);
-                Memory.WriteBlobOffset(packages);
+                Memory.WriteStringHandle(name);
+                Memory.WriteStringHandle(publicKeyToken);
+                Memory.WriteStringHandle(version);
+                Memory.WriteBlobHandle(rootApis);
+                Memory.WriteBlobHandle(frameworks);
+                Memory.WriteBlobHandle(packages);
 
-                return offset;
+                return handle;
             }
         }
 
         private sealed class UsageSourceTable : HeapOrTable
         {
-            public UsageSourceOffset WriteRow(StringOffset name,
+            public UsageSourceHandle WriteRow(StringHandle name,
                                               int dayNumber)
             {
-                var offset = new UsageSourceOffset(Memory.GetLength());
+                var handle = new UsageSourceHandle(Memory.GetLength() / ApiCatalogSchema.UsageSourceRow.Size);
 
-                Memory.WriteStringOffset(name);
+                Memory.WriteStringHandle(name);
                 Memory.WriteInt32(dayNumber);
 
-                return offset;
+                return handle;
             }
         }
 
         private sealed class ApiTable : HeapOrTable
         {
-            public ApiOffset WriteRow(Guid fingerprint,
+            public ApiHandle WriteRow(Guid fingerprint,
                                       byte kind,
-                                      ApiOffset parent,
-                                      StringOffset name,
-                                      BlobOffset children,
-                                      BlobOffset declarations,
-                                      BlobOffset usages)
+                                      ApiHandle parent,
+                                      StringHandle name,
+                                      BlobHandle children,
+                                      BlobHandle declarations,
+                                      BlobHandle usages)
             {
-                var offset = new ApiOffset(Memory.GetLength());
+                var handle = new ApiHandle(Memory.GetLength() / ApiCatalogSchema.ApiRow.Size);
 
                 Memory.WriteGuid(fingerprint);
                 Memory.WriteByte(kind);
-                Memory.WriteApiOffset(parent);
-                Memory.WriteStringOffset(name);
-                Memory.WriteBlobOffset(children);
-                Memory.WriteBlobOffset(declarations);
-                Memory.WriteBlobOffset(usages);
+                Memory.WriteApiHandle(parent);
+                Memory.WriteStringHandle(name);
+                Memory.WriteBlobHandle(children);
+                Memory.WriteBlobHandle(declarations);
+                Memory.WriteBlobHandle(usages);
 
-                return offset;
+                return handle;
             }
         }
 
         private sealed class RootApiTable : HeapOrTable
         {
-            public void WriteRow(ApiOffset api)
+            public void WriteRow(ApiHandle api)
             {
-                Memory.WriteApiOffset(api);
+                Memory.WriteApiHandle(api);
             }
         }
 
         private sealed class ObsoletionTable : HeapOrTable
         {
-            public void WriteRow(ApiOffset api,
-                                 AssemblyOffset assembly,
-                                 StringOffset message,
+            public void WriteRow(ApiHandle api,
+                                 AssemblyHandle assembly,
+                                 StringHandle message,
                                  bool isError,
-                                 StringOffset diagnosticId,
-                                 StringOffset urlFormat)
+                                 StringHandle diagnosticId,
+                                 StringHandle urlFormat)
             {
-                Memory.WriteApiOffset(api);
-                Memory.WriteAssemblyOffset(assembly);
-                Memory.WriteStringOffset(message);
+                Memory.WriteApiHandle(api);
+                Memory.WriteAssemblyHandle(assembly);
+                Memory.WriteStringHandle(message);
                 Memory.WriteBool(isError);
-                Memory.WriteStringOffset(diagnosticId);
-                Memory.WriteStringOffset(urlFormat);
+                Memory.WriteStringHandle(diagnosticId);
+                Memory.WriteStringHandle(urlFormat);
             }
         }
 
         private sealed class PlatformSupportTable : HeapOrTable
         {
-            public void WriteRow(ApiOffset api,
-                                 AssemblyOffset assembly,
-                                 BlobOffset platforms)
+            public void WriteRow(ApiHandle api,
+                                 AssemblyHandle assembly,
+                                 BlobHandle platforms)
             {
-                Memory.WriteApiOffset(api);
-                Memory.WriteAssemblyOffset(assembly);
-                Memory.WriteBlobOffset(platforms);
+                Memory.WriteApiHandle(api);
+                Memory.WriteAssemblyHandle(assembly);
+                Memory.WriteBlobHandle(platforms);
             }
         }
 
         private sealed class PreviewRequirementTable : HeapOrTable
         {
-            public void WriteRow(ApiOffset api,
-                                 AssemblyOffset assembly,
-                                 StringOffset message,
-                                 StringOffset url)
+            public void WriteRow(ApiHandle api,
+                                 AssemblyHandle assembly,
+                                 StringHandle message,
+                                 StringHandle url)
             {
-                Memory.WriteApiOffset(api);
-                Memory.WriteAssemblyOffset(assembly);
-                Memory.WriteStringOffset(message);
-                Memory.WriteStringOffset(url);
+                Memory.WriteApiHandle(api);
+                Memory.WriteAssemblyHandle(assembly);
+                Memory.WriteStringHandle(message);
+                Memory.WriteStringHandle(url);
             }
         }
 
         private sealed class ExperimentalTable : HeapOrTable
         {
-            public void WriteRow(ApiOffset api,
-                                 AssemblyOffset assembly,
-                                 StringOffset diagnosticId,
-                                 StringOffset urlFormat)
+            public void WriteRow(ApiHandle api,
+                                 AssemblyHandle assembly,
+                                 StringHandle diagnosticId,
+                                 StringHandle urlFormat)
             {
-                Memory.WriteApiOffset(api);
-                Memory.WriteAssemblyOffset(assembly);
-                Memory.WriteStringOffset(diagnosticId);
-                Memory.WriteStringOffset(urlFormat);
+                Memory.WriteApiHandle(api);
+                Memory.WriteAssemblyHandle(assembly);
+                Memory.WriteStringHandle(diagnosticId);
+                Memory.WriteStringHandle(urlFormat);
             }
         }
 
         private sealed class ExtensionMethodTable : HeapOrTable
         {
             public void WriteRow(Guid extensionMethodGuid,
-                                 ApiOffset extendedType,
-                                 ApiOffset extensionMethod)
+                                 ApiHandle extendedType,
+                                 ApiHandle extensionMethod)
             {
                 Memory.WriteGuid(extensionMethodGuid);
-                Memory.WriteApiOffset(extendedType);
-                Memory.WriteApiOffset(extensionMethod);
+                Memory.WriteApiHandle(extendedType);
+                Memory.WriteApiHandle(extensionMethod);
             }
         }
     }

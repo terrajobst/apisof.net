@@ -6,31 +6,32 @@ namespace Terrajobst.ApiCatalog;
 public readonly struct FrameworkModel : IEquatable<FrameworkModel>
 {
     private readonly ApiCatalogModel _catalog;
-    private readonly int _offset;
+    private readonly int _index;
 
-    internal FrameworkModel(ApiCatalogModel catalog, int offset)
+    internal FrameworkModel(ApiCatalogModel catalog, int index)
     {
-        ApiCatalogSchema.EnsureValidOffset(catalog.FrameworkTable, ApiCatalogSchema.FrameworkRow.Size, offset);
+        ThrowIfNull(catalog);
+        ThrowIfRowIndexOutOfRange(catalog, ApiCatalogHeapOrTable.FrameworkTable, index);
 
         _catalog = catalog;
-        _offset = offset;
+        _index = index;
     }
+
+    public int Id => _index;
 
     public ApiCatalogModel Catalog => _catalog;
 
-    public int Id => _offset;
-
-    public string Name => ApiCatalogSchema.FrameworkRow.Name.Read(_catalog, _offset);
+    public string Name => ApiCatalogSchema.FrameworkRow.Name.Read(_catalog, _index);
 
     public bool IsPreview => _catalog.IsPreviewFramework(this);
 
-    public NuGetFramework NuGetFramework => _catalog.AvailabilityContext.GetNuGetFramework(_offset);
+    public NuGetFramework NuGetFramework => _catalog.AvailabilityContext.GetNuGetFramework(_index);
 
     public AssemblyEnumerator Assemblies
     {
         get
         {
-            var enumerator = ApiCatalogSchema.FrameworkRow.Assemblies.Read(_catalog, _offset);
+            var enumerator = ApiCatalogSchema.FrameworkRow.Assemblies.Read(_catalog, _index);
             return new AssemblyEnumerator(enumerator);
         }
     }
@@ -43,12 +44,12 @@ public readonly struct FrameworkModel : IEquatable<FrameworkModel>
     public bool Equals(FrameworkModel other)
     {
         return ReferenceEquals(_catalog, other._catalog) &&
-               _offset == other._offset;
+               _index == other._index;
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(_catalog, _offset);
+        return HashCode.Combine(_catalog, _index);
     }
 
     public static bool operator ==(FrameworkModel left, FrameworkModel right)

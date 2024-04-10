@@ -15,28 +15,28 @@ internal static partial class ApiCatalogSchema
 
     // Definitions of array structures
 
-    public static readonly ApiDeclarationLayout ApiDeclarationStructure = new(new LayoutBuilder(c => c.BlobHeap));
+    public static readonly ApiDeclarationLayout ApiDeclarationStructure = new(new LayoutBuilder(ApiCatalogHeapOrTable.BlobHeap));
 
-    public static readonly ApiUsageLayout ApiUsageStructure = new(new LayoutBuilder(c => c.BlobHeap));
+    public static readonly ApiUsageLayout ApiUsageStructure = new(new LayoutBuilder(ApiCatalogHeapOrTable.BlobHeap));
 
-    public static readonly PackageAssemblyTupleLayout PackageAssemblyTuple = new(new LayoutBuilder(c => c.BlobHeap));
+    public static readonly PackageAssemblyTupleLayout PackageAssemblyTuple = new(new LayoutBuilder(ApiCatalogHeapOrTable.BlobHeap));
 
-    public static readonly AssemblyPackageTupleLayout AssemblyPackageTuple = new(new LayoutBuilder(c => c.BlobHeap));
+    public static readonly AssemblyPackageTupleLayout AssemblyPackageTuple = new(new LayoutBuilder(ApiCatalogHeapOrTable.BlobHeap));
 
-    public static readonly PlatformIsSupportedTupleLayout PlatformIsSupportedTuple = new(new LayoutBuilder(c => c.BlobHeap));
+    public static readonly PlatformIsSupportedTupleLayout PlatformIsSupportedTuple = new(new LayoutBuilder(ApiCatalogHeapOrTable.BlobHeap));
 
     // Definition of Tables
 
-    public static readonly PlatformRowLayout PlatformRow = new(new LayoutBuilder(c => c.PlatformTable));
-    public static readonly FrameworkRowLayout FrameworkRow = new(new LayoutBuilder(c => c.FrameworkTable));
-    public static readonly PackageRowLayout PackageRow = new(new LayoutBuilder(c => c.PackageTable));
-    public static readonly AssemblyRowLayout AssemblyRow = new(new LayoutBuilder(c => c.AssemblyTable));
-    public static readonly UsageSourceRowLayout UsageSourceRow = new(new LayoutBuilder(c => c.UsageSourceTable));
-    public static readonly ApiRowLayout ApiRow = new(new LayoutBuilder(c => c.ApiTable));
-    public static readonly RootApiRowLayout RootApiRow = new(new LayoutBuilder(c => c.RootApiTable));
-    public static readonly ExtensionMethodRowLayout ExtensionMethodRow = new(new LayoutBuilder(c => c.ExtensionMethodTable));
-    public static readonly ObsoletionRowLayout ObsoletionRow = new(new LayoutBuilder(c => c.ObsoletionTable));
-    public static readonly PlatformSupportRowLayout PlatformSupportRow = new(new LayoutBuilder(c => c.PlatformSupportTable));
-    public static readonly PreviewRequirementRowLayout PreviewRequirementRow = new(new LayoutBuilder(c => c.PreviewRequirementTable));
-    public static readonly ExperimentalRowLayout ExperimentalRow = new(new LayoutBuilder(c => c.ExperimentalTable));
+    public static readonly PlatformRowLayout PlatformRow = new(new LayoutBuilder(ApiCatalogHeapOrTable.PlatformTable));
+    public static readonly FrameworkRowLayout FrameworkRow = new(new LayoutBuilder(ApiCatalogHeapOrTable.FrameworkTable));
+    public static readonly PackageRowLayout PackageRow = new(new LayoutBuilder(ApiCatalogHeapOrTable.PackageTable));
+    public static readonly AssemblyRowLayout AssemblyRow = new(new LayoutBuilder(ApiCatalogHeapOrTable.AssemblyTable));
+    public static readonly UsageSourceRowLayout UsageSourceRow = new(new LayoutBuilder(ApiCatalogHeapOrTable.UsageSourceTable));
+    public static readonly ApiRowLayout ApiRow = new(new LayoutBuilder(ApiCatalogHeapOrTable.ApiTable));
+    public static readonly RootApiRowLayout RootApiRow = new(new LayoutBuilder(ApiCatalogHeapOrTable.RootApiTable));
+    public static readonly ExtensionMethodRowLayout ExtensionMethodRow = new(new LayoutBuilder(ApiCatalogHeapOrTable.ExtensionMethodTable));
+    public static readonly ObsoletionRowLayout ObsoletionRow = new(new LayoutBuilder(ApiCatalogHeapOrTable.ObsoletionTable));
+    public static readonly PlatformSupportRowLayout PlatformSupportRow = new(new LayoutBuilder(ApiCatalogHeapOrTable.PlatformSupportTable));
+    public static readonly PreviewRequirementRowLayout PreviewRequirementRow = new(new LayoutBuilder(ApiCatalogHeapOrTable.PreviewRequirementTable));
+    public static readonly ExperimentalRowLayout ExperimentalRow = new(new LayoutBuilder(ApiCatalogHeapOrTable.ExperimentalTable));
 }
