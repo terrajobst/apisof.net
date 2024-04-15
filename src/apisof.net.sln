@@ -41,6 +41,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Terrajobst.UsageCrawling.St
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Terrajobst.UsageCrawling.Storage", "Terrajobst.UsageCrawling.Storage\Terrajobst.UsageCrawling.Storage.csproj", "{81851503-6DDC-4D2C-BF3F-F63ACB1974F4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenFeatureReport", "GenFeatureReport\GenFeatureReport.csproj", "{BA99033F-E280-450D-9AB5-ECC917608ACE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -123,6 +125,10 @@ Global
 		{81851503-6DDC-4D2C-BF3F-F63ACB1974F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{81851503-6DDC-4D2C-BF3F-F63ACB1974F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{81851503-6DDC-4D2C-BF3F-F63ACB1974F4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA99033F-E280-450D-9AB5-ECC917608ACE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA99033F-E280-450D-9AB5-ECC917608ACE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA99033F-E280-450D-9AB5-ECC917608ACE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA99033F-E280-450D-9AB5-ECC917608ACE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
