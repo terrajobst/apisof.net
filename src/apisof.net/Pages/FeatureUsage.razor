@@ -37,4 +37,51 @@
             }
         </table>
     </div>
+
+    <div class="mx-auto col-md-5">
+        <h3>
+            Sources
+        </h3>
+        @foreach (var usageSource in CatalogService.UsageData.UsageSources)
+        {
+            <div class="row mt-5 justify-content-between">
+                <div class="col">
+                    <h4>@usageSource.Name</h4>
+                </div>
+                <div class="col d-flex justify-content-center">
+                    <dl>
+                        <dt>Last Indexed</dt>
+                        <dd>@usageSource.Date.Humanize()</dd>
+                    </dl>
+                </div>
+                <div class="col text-right">
+                    <dl>
+                        <dt># Units</dt>
+                        <dd>@usageSource.ReferenceUnitCount.ToString("N0")</dd>
+                    </dl>
+                </div>
+            </div>
+            <div class="progress">
+                @{
+                    var colors = new[]
+                    {
+                        "bg-success",
+                        "bg-warning",
+                        "bg-danger"
+                    };
+                }
+                @foreach (var (version, count) in usageSource.VersionDistribution.OrderBy(t => t.Version))
+                {
+                    var distanceFromCurrent = int.Clamp(usageSource.SupportedCollectionVersion - version, 0, colors.Length - 1);
+                    var percentage = ((float)count / usageSource.ReferenceUnitCount).ToString("P0");
+                    var color = colors[distanceFromCurrent];
+                    var title = distanceFromCurrent == 0
+                        ? $"{count.ToMetric(decimals: 0)} units are up-to-date."
+                        : $"{count.ToMetric(decimals: 0)} units in version {version} are behind and will be re-indexed.";
+                    <div class="progress-bar @color" title="@title" role="progressbar" style="width: @(percentage)" aria-valuenow="15" aria-valuemin="0" aria-valuemax="100"></div>
+                }
+            </div>
+        }
+    </div>
+
 </div>
