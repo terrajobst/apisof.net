@@ -1,0 +1,40 @@
+﻿@page "/catalog/areas"
+@page "/catalog/areas/{AreaName}"
+
+<div class="container-fluid px-0">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><Glyph Kind="GlyphKind.Database" /> <a href="@Link.ForCatalog()">Catalog</a></li>
+        </ol>
+    </nav>
+</div>
+
+<div class="container-fluid">
+
+    <ul class="list-unstyled">
+        <li>
+            <Glyph Kind="GlyphKind.Database" /> <span class="font-weight-bold">Catalog</span>
+
+            <ul class="list-unstyled pl-4">
+                @if (Area is null)
+                {
+                    @foreach (var area in Areas)
+                    {
+                        <li>
+                            <a href="@Link.For(area)">@area.Name</a>
+                        </li>
+                    }
+                }
+                else
+                {
+                    foreach (var child in GetRootApis())
+                    {
+                        <li>
+                            <Glyph Kind="@child.Kind.GetGlyph()" /> <a href="@Link.For(child)">@child.Name</a>
+                        </li>
+                    }
+                }
+            </ul>
+        </li>
+    </ul>
+</div>

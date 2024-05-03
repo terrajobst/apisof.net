@@ -73,6 +73,13 @@ public sealed class LinkService
         return $"/catalog/download/diff{query}";
     }
 
+    public string For(Area area)
+    {
+        ThrowIfNull(area);
+
+        return $"/catalog/areas/{area.Name}";
+    }
+
     public string For(ApiModel api, NuGetFramework? selected = null)
     {
         ThrowIfDefault(api);
