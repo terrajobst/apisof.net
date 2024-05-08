@@ -15,37 +15,41 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Terrajobst.UsageCrawling", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Terrajobst.UsageCrawling.Tests", "Terrajobst.UsageCrawling.Tests\Terrajobst.UsageCrawling.Tests.csproj", "{82E2D087-374B-4AC7-8337-C3A0B85905E6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "apisofdotnet", "apisofdotnet\apisofdotnet.csproj", "{F620DDA9-9E80-48E8-9714-BE39D48CC04C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "apisofdotnet", "apisofdotnet\apisofdotnet.csproj", "{F620DDA9-9E80-48E8-9714-BE39D48CC04C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Terrajobst.ApiCatalog.Tests", "Terrajobst.ApiCatalog.Tests\Terrajobst.ApiCatalog.Tests.csproj", "{BB19E5F5-E7C0-49F7-A167-1C552FBE48BD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Terrajobst.ApiCatalog.Tests", "Terrajobst.ApiCatalog.Tests\Terrajobst.ApiCatalog.Tests.csproj", "{BB19E5F5-E7C0-49F7-A167-1C552FBE48BD}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetUpgradePlanner", "NetUpgradePlanner\NetUpgradePlanner.csproj", "{1BD72F4A-A2DA-4118-8426-AFDB9AA7131F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenUsagePlanner", "GenUsagePlanner\GenUsagePlanner.csproj", "{EDB9C068-C136-4C34-809F-313D4F8D71B7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GenUsagePlanner", "GenUsagePlanner\GenUsagePlanner.csproj", "{EDB9C068-C136-4C34-809F-313D4F8D71B7}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DumpMissingNetFxFeatures", "DumpMissingNetFxFeatures\DumpMissingNetFxFeatures.csproj", "{B2AF2985-1666-4388-BC4F-F50BF280BA16}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetUpgradePlannerTelemetry", "NetUpgradePlannerTelemetry\NetUpgradePlannerTelemetry.csproj", "{15CA1AF5-E8AA-4923-847F-75E12E5BBB15}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetUpgradePlannerTelemetry", "NetUpgradePlannerTelemetry\NetUpgradePlannerTelemetry.csproj", "{15CA1AF5-E8AA-4923-847F-75E12E5BBB15}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Terrajobst.NetUpgradePlanner", "Terrajobst.NetUpgradePlanner\Terrajobst.NetUpgradePlanner.csproj", "{79AD0F8D-72C1-44C2-A21D-779BDD5B7483}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Terrajobst.NetUpgradePlanner", "Terrajobst.NetUpgradePlanner\Terrajobst.NetUpgradePlanner.csproj", "{79AD0F8D-72C1-44C2-A21D-779BDD5B7483}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Terrajobst.NetUpgradePlanner.Excel", "Terrajobst.NetUpgradePlanner.Excel\Terrajobst.NetUpgradePlanner.Excel.csproj", "{EC6D9959-842C-4810-BD66-176ECD820273}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Terrajobst.NetUpgradePlanner.Excel", "Terrajobst.NetUpgradePlanner.Excel\Terrajobst.NetUpgradePlanner.Excel.csproj", "{EC6D9959-842C-4810-BD66-176ECD820273}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DumpPacks", "DumpPacks\DumpPacks.csproj", "{49A3347C-1D94-4AB4-B7A7-FC645A139573}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DumpPacks", "DumpPacks\DumpPacks.csproj", "{49A3347C-1D94-4AB4-B7A7-FC645A139573}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Terrajobst.ApiCatalog.SuffixTree", "Terrajobst.ApiCatalog.SuffixTree\Terrajobst.ApiCatalog.SuffixTree.csproj", "{763DB88C-AF41-498C-866D-A7E80ABF0856}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Terrajobst.ApiCatalog.SuffixTree", "Terrajobst.ApiCatalog.SuffixTree\Terrajobst.ApiCatalog.SuffixTree.csproj", "{763DB88C-AF41-498C-866D-A7E80ABF0856}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Terrajobst.ApiCatalog.Generation", "Terrajobst.ApiCatalog.Generation\Terrajobst.ApiCatalog.Generation.csproj", "{9ECA9FB2-4256-4C4D-89A5-2EAA5584788C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Terrajobst.ApiCatalog.Generation", "Terrajobst.ApiCatalog.Generation\Terrajobst.ApiCatalog.Generation.csproj", "{9ECA9FB2-4256-4C4D-89A5-2EAA5584788C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Terrajobst.UsageCrawling.Storage.Tests", "Terrajobst.UsageCrawling.Storage.Tests\Terrajobst.UsageCrawling.Storage.Tests.csproj", "{05123972-B752-4817-BABF-8DB793881F93}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Terrajobst.UsageCrawling.Storage.Tests", "Terrajobst.UsageCrawling.Storage.Tests\Terrajobst.UsageCrawling.Storage.Tests.csproj", "{05123972-B752-4817-BABF-8DB793881F93}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Terrajobst.UsageCrawling.Storage", "Terrajobst.UsageCrawling.Storage\Terrajobst.UsageCrawling.Storage.csproj", "{81851503-6DDC-4D2C-BF3F-F63ACB1974F4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Terrajobst.UsageCrawling.Storage", "Terrajobst.UsageCrawling.Storage\Terrajobst.UsageCrawling.Storage.csproj", "{81851503-6DDC-4D2C-BF3F-F63ACB1974F4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenUsage", "GenUsage\GenUsage.csproj", "{1DBE6D70-A8D3-48CE-B475-B2FB4A0B726D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GenUsage", "GenUsage\GenUsage.csproj", "{1DBE6D70-A8D3-48CE-B475-B2FB4A0B726D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenDesignNotes", "GenDesignNotes\GenDesignNotes.csproj", "{07BCC162-8864-4B3F-B0F2-0626C757C1D3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GenDesignNotes", "GenDesignNotes\GenDesignNotes.csproj", "{07BCC162-8864-4B3F-B0F2-0626C757C1D3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Terrajobst.ApiCatalog.ActionsRunner", "Terrajobst.ApiCatalog.ActionsRunner\Terrajobst.ApiCatalog.ActionsRunner.csproj", "{599287D4-00B4-47C6-AC3B-322E881FC01B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Terrajobst.ApiCatalog.ActionsRunner", "Terrajobst.ApiCatalog.ActionsRunner\Terrajobst.ApiCatalog.ActionsRunner.csproj", "{599287D4-00B4-47C6-AC3B-322E881FC01B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenAspNet22DowngradeBreaks", "GenAspNet22DowngradeBreaks\GenAspNet22DowngradeBreaks.csproj", "{1FCF9358-086D-4BC2-BB57-C5DD1D088074}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FindAspNetCore22DowngradeBreaks", "FindAspNetCore22DowngradeBreaks\FindAspNetCore22DowngradeBreaks.csproj", "{CE506580-D71A-46BB-84AF-5B1BEBDD1C05}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -85,14 +89,14 @@ Global
 		{BB19E5F5-E7C0-49F7-A167-1C552FBE48BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BB19E5F5-E7C0-49F7-A167-1C552FBE48BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BB19E5F5-E7C0-49F7-A167-1C552FBE48BD}.Release|Any CPU.Build.0 = Release|Any CPU
-		{EDB9C068-C136-4C34-809F-313D4F8D71B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EDB9C068-C136-4C34-809F-313D4F8D71B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EDB9C068-C136-4C34-809F-313D4F8D71B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EDB9C068-C136-4C34-809F-313D4F8D71B7}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1BD72F4A-A2DA-4118-8426-AFDB9AA7131F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1BD72F4A-A2DA-4118-8426-AFDB9AA7131F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1BD72F4A-A2DA-4118-8426-AFDB9AA7131F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1BD72F4A-A2DA-4118-8426-AFDB9AA7131F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EDB9C068-C136-4C34-809F-313D4F8D71B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EDB9C068-C136-4C34-809F-313D4F8D71B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EDB9C068-C136-4C34-809F-313D4F8D71B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EDB9C068-C136-4C34-809F-313D4F8D71B7}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B2AF2985-1666-4388-BC4F-F50BF280BA16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B2AF2985-1666-4388-BC4F-F50BF280BA16}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B2AF2985-1666-4388-BC4F-F50BF280BA16}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -141,6 +145,14 @@ Global
 		{599287D4-00B4-47C6-AC3B-322E881FC01B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{599287D4-00B4-47C6-AC3B-322E881FC01B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{599287D4-00B4-47C6-AC3B-322E881FC01B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1FCF9358-086D-4BC2-BB57-C5DD1D088074}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1FCF9358-086D-4BC2-BB57-C5DD1D088074}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1FCF9358-086D-4BC2-BB57-C5DD1D088074}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1FCF9358-086D-4BC2-BB57-C5DD1D088074}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CE506580-D71A-46BB-84AF-5B1BEBDD1C05}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE506580-D71A-46BB-84AF-5B1BEBDD1C05}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE506580-D71A-46BB-84AF-5B1BEBDD1C05}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE506580-D71A-46BB-84AF-5B1BEBDD1C05}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
