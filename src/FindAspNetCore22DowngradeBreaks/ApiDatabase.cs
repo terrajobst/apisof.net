@@ -29,9 +29,12 @@ internal sealed class ApiDatabase
         return result;
     }
 
+    public IEnumerable<ApiEntry> Entries => _apis.Values;
+
     public static ApiDatabase Load()
     {
-        using var stream = typeof(Program).Assembly.GetManifestResourceStream(@"FindAspNetCore22DowngradeBreaks.aspnet22-downgrade-breaks.dat");
+        var appName = Path.GetFileNameWithoutExtension(Environment.ProcessPath);
+        using var stream = typeof(Program).Assembly.GetManifestResourceStream($"{appName}.aspnet22-downgrade-breaks.dat")!;
         using var reader = new BinaryReader(stream);
 
         var apis = new Dictionary<Guid, ApiEntry>();

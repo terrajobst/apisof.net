@@ -47,9 +47,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GenDesignNotes", "GenDesign
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Terrajobst.ApiCatalog.ActionsRunner", "Terrajobst.ApiCatalog.ActionsRunner\Terrajobst.ApiCatalog.ActionsRunner.csproj", "{599287D4-00B4-47C6-AC3B-322E881FC01B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenAspNet22DowngradeBreaks", "GenAspNet22DowngradeBreaks\GenAspNet22DowngradeBreaks.csproj", "{1FCF9358-086D-4BC2-BB57-C5DD1D088074}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GenAspNet22DowngradeBreaks", "GenAspNet22DowngradeBreaks\GenAspNet22DowngradeBreaks.csproj", "{1FCF9358-086D-4BC2-BB57-C5DD1D088074}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FindAspNetCore22DowngradeBreaks", "FindAspNetCore22DowngradeBreaks\FindAspNetCore22DowngradeBreaks.csproj", "{CE506580-D71A-46BB-84AF-5B1BEBDD1C05}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FindAspNetCore22DowngradeBreaks", "FindAspNetCore22DowngradeBreaks\FindAspNetCore22DowngradeBreaks.csproj", "{CE506580-D71A-46BB-84AF-5B1BEBDD1C05}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FindAspNetCore22DowngradeBreaksInTelemetry", "FindAspNetCore22DowngradeBreaksInTelemetry\FindAspNetCore22DowngradeBreaksInTelemetry.csproj", "{AFC32ED7-0863-4258-B710-F991386944FD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -153,6 +155,10 @@ Global
 		{CE506580-D71A-46BB-84AF-5B1BEBDD1C05}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CE506580-D71A-46BB-84AF-5B1BEBDD1C05}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CE506580-D71A-46BB-84AF-5B1BEBDD1C05}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AFC32ED7-0863-4258-B710-F991386944FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFC32ED7-0863-4258-B710-F991386944FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFC32ED7-0863-4258-B710-F991386944FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFC32ED7-0863-4258-B710-F991386944FD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
