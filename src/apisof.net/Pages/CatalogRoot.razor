@@ -1,8 +1,8 @@
 ﻿@page "/catalog"
 
-<div class="container-fluid px-0">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
+<div class="container-fluid px-0 mb-2">
+    <nav class="p-2 bg-secondary-subtle" aria-label="breadcrumb">
+        <ol class="my-0 breadcrumb">
             @if (BrowsingContext is FrameworkDiffBrowsingContext diffContext)
             {
                 var left = diffContext.Left.GetShortFolderName();
@@ -16,13 +16,13 @@
     </nav>
 </div>
 
-<div class="container-fluid">
+<div class="container-fluid ps-2">
 
     <ul class="list-unstyled">
         <li>
             <Glyph Kind="GlyphKind.Database" /> <span class="font-weight-bold">Catalog</span>
 
-            <ul class="list-unstyled pl-4">
+            <ul class="list-unstyled ps-4">
                 @{
                     var items = CatalogService.Catalog.RootApis
                         .Order()

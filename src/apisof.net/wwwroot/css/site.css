@@ -41,10 +41,6 @@
         top: 0.5rem;
     }
 
-.breadcrumb {
-    border-radius: 0rem;
-}
-
 /* General */
 
 .nofocus:focus {
@@ -59,6 +55,14 @@ tr.no-border-top td {
 code {
     color: unset !important;
 }
+
+a:not([class]) {
+    text-decoration: none;
+}
+
+    a:not([class]):hover {
+        text-decoration: underline;
+    }
 
 /* Stats */
 

@@ -1,7 +1,8 @@
 ﻿@using NuGet.Frameworks
-<div class="container-fluid px-0">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
+
+<div class="container-fluid px-0 mb-2">
+    <nav class="p-2 bg-secondary-subtle" aria-label="breadcrumb">
+        <ol class="my-0 breadcrumb">
             @if (BrowsingContext is FrameworkDiffBrowsingContext diffContext)
             {
                 var left = diffContext.Left.GetShortFolderName();

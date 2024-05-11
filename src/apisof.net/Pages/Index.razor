@@ -1,13 +1,15 @@
 ﻿@page "/"
 
-<div class="jumbotron jumbotron-fluid">
-    <div class="container">
-        <h1 class="display-4">.NET API Catalog</h1>
-        <p class="lead">The catalog contains <strong>@Statistics.NumberOfApis.ToString("N0")</strong> APIs.</p>
-
-        <div class="btn-group" role="group">
-            <a type="button" class="btn btn-lg btn-primary" href="@Link.ForCatalog()">Browse</a>
-            <button type="button" class="btn btn-lg btn-info" @onclick="() => MainLayout.ApiSearch.Open()">Search</button>
+<div class="container-fluid bg-light">
+    <div class="container p-5 mb-4">
+        <div class="container-fluid py-5">
+            <h1 class="display-5 fw-bold">.NET API Catalog</h1>
+            <p class="col-md-8 fs-4">The catalog contains <strong>@Statistics.NumberOfApis.ToString("N0")</strong> APIs.</p>
+            <div class="btn-group" role="group">
+                <a type="button" class="btn btn-lg btn-primary" href="@Link.ForCatalog()">Browse</a>
+                <button type="button" class="btn btn-lg btn-info" @onclick="() => MainLayout.ApiSearch.Open()">Search</button>
+            </div>
         </div>
     </div>
 </div>
+

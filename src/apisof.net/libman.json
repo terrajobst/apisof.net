@@ -8,21 +8,6 @@
       "files": [
         "jquery.min.js"
       ]
-    },
-    {
-      "library": "twitter-bootstrap@4.5.2",
-      "destination": "wwwroot/lib/twitter-bootstrap/",
-      "files": [
-        "js/bootstrap.bundle.min.js"
-      ]
-    },
-    {
-      "provider": "jsdelivr",
-      "library": "@forevolve/bootstrap-dark@1.1.0",
-      "destination": "wwwroot/lib/forevolve/bootstrap-dark/",
-      "files": [
-        "dist/css/bootstrap-dark.min.css"
-      ]
     }
   ]
 }

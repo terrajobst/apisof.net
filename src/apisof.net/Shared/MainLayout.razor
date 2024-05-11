@@ -1,55 +1,57 @@
 ﻿@inherits LayoutComponentBase
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dotnet">
-    <a class="navbar-brand" href="/">.NET API Catalog</a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarText">
-        <ul class="navbar-nav mr-auto">
-            <li>
-                <NavLink class="nav-link" href="@Link.ForCatalog()" Match="NavLinkMatch.All">
-                    <span class="oi oi-folder pr-1"></span> Browse
-                </NavLink>
-            </li>
-            <li>
-                <a class="nav-link" href="#" @onclick="() => ApiSearch.Open()">
-                    <span class="oi oi-magnifying-glass pr-1"></span> Search
-                </a>
-            </li>
-            <li>
-                <a class="nav-link" href="@Link.ForDiff()">
-                    <span class="oi oi-file pr-1"></span> Diff
-                </a>
-            </li>
-            <li class="dropdown">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-expanded="false">
-                    <span class="oi oi-link-intact"></span> Others
-                </a>
-                <div class="dropdown-menu">
-                    <a class="dropdown-item" href="/feature-usage">
-                        <span class="oi oi-dial mr-2"></span> Feature Usage
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">.NET API Catalog</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarText">
+            <ul class="navbar-nav me-auto">
+                <li>
+                    <NavLink class="nav-link" href="@Link.ForCatalog()" Match="NavLinkMatch.All">
+                        <span class="oi oi-folder pr-1"></span> Browse
+                    </NavLink>
+                </li>
+                <li>
+                    <a class="nav-link" href="#" @onclick="() => ApiSearch.Open()">
+                        <span class="oi oi-magnifying-glass pr-1"></span> Search
                     </a>
-                    <a class="dropdown-item" href="/stats">
-                        <span class="oi oi-pie-chart mr-2"></span> Stats
+                </li>
+                <li>
+                    <a class="nav-link" href="@Link.ForDiff()">
+                        <span class="oi oi-file pr-1"></span> Diff
                     </a>
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="/version">
-                        <span class="oi oi-tag mr-2"></span> Version
+                </li>
+                <li class="dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-expanded="false">
+                        <span class="oi oi-link-intact"></span> Others
                     </a>
-                    <a class="dropdown-item" href="https://github.com/dotnet/apisof.net">
-                        <span class="oi oi-code mr-2"></span> Source
-                    </a>
-                </div>
-            </li>
-        </ul>
-        <ul class="navbar-nav">
-            <li>
-                <NavLink class="nav-link" href="/upgrade-planner">
-                    <span class="oi oi-cloud-download"></span> .NET Upgrade Planner
-                </NavLink>
-            </li>
-        </ul>
+                    <div class="dropdown-menu">
+                        <a class="dropdown-item" href="/feature-usage">
+                            <span class="oi oi-dial mr-2"></span> Feature Usage
+                        </a>
+                        <a class="dropdown-item" href="/stats">
+                            <span class="oi oi-pie-chart mr-2"></span> Stats
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="/version">
+                            <span class="oi oi-tag mr-2"></span> Version
+                        </a>
+                        <a class="dropdown-item" href="https://github.com/dotnet/apisof.net">
+                            <span class="oi oi-code mr-2"></span> Source
+                        </a>
+                    </div>
+                </li>
+            </ul>
+            <ul class="navbar-nav">
+                <li>
+                    <NavLink class="nav-link" href="/upgrade-planner">
+                        <span class="oi oi-cloud-download"></span> .NET Upgrade Planner
+                    </NavLink>
+                </li>
+            </ul>
+        </div>
     </div>
 </nav>
 
